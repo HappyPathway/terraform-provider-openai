@@ -7,6 +7,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	openaiapi "github.com/openai/openai-go"
+	"github.com/openai/openai-go/option"
 )
 
 func Provider() *schema.Provider {
@@ -14,7 +16,7 @@ func Provider() *schema.Provider {
 		Schema: map[string]*schema.Schema{
 			"api_key": {
 				Type:        schema.TypeString,
-				Optional:    true, // Changed from Required to Optional
+				Optional:    true,
 				Sensitive:   true,
 				Description: "OpenAI API Key",
 			},
@@ -26,19 +28,19 @@ func Provider() *schema.Provider {
 			"retry_max": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Default:     defaultRetryMax,
+				Default:     2,
 				Description: "Maximum number of retries for API requests",
 			},
 			"retry_delay": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Default:     int(defaultRetryDelay.Seconds()),
+				Default:     5,
 				Description: "Delay between retries in seconds",
 			},
 			"timeout": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Default:     int(defaultHTTPTimeout.Seconds()),
+				Default:     30,
 				Description: "Timeout for API requests in seconds",
 			},
 		},
@@ -52,6 +54,7 @@ func Provider() *schema.Provider {
 			"openai_assistant":         resourceOpenAIAssistant(),
 			"openai_fine_tuning_job":   resourceOpenAIFineTuningJob(),
 			"openai_content_generator": ResourceOpenAIContentGenerator(),
+			"openai_thread":            resourceOpenAIThread(),
 		},
 		ConfigureContextFunc: providerConfigure,
 	}
@@ -70,18 +73,16 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		return nil, diag.Errorf("api_key must be provided via configuration or OPENAI_API_KEY environment variable")
 	}
 
-	config := ClientConfig{
-		APIKey:     apiKey,
-		RetryMax:   d.Get("retry_max").(int),
-		RetryDelay: time.Duration(d.Get("retry_delay").(int)) * time.Second,
-		Timeout:    time.Duration(d.Get("timeout").(int)) * time.Second,
+	opts := []option.RequestOption{
+		option.WithAPIKey(apiKey),
+		option.WithMaxRetries(d.Get("retry_max").(int)),
+		option.WithRequestTimeout(time.Duration(d.Get("timeout").(int)) * time.Second),
 	}
 
-	if v, ok := d.GetOk("organization_id"); ok {
-		// Organization ID will be used in a future implementation
-		_ = v.(string)
+	if orgID, ok := d.GetOk("organization_id"); ok {
+		opts = append(opts, option.WithOrganization(orgID.(string)))
 	}
 
-	client := NewClientWithConfig(config)
-	return client, nil
+	client := openaiapi.NewClient(opts...)
+	return &Config{Client: client}, nil
 }
