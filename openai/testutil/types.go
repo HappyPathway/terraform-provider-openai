@@ -32,13 +32,13 @@ type File struct {
 type Assistant struct {
 	ID           string            `json:"id"`
 	Object       string            `json:"object"`
-	CreatedAt    int              `json:"created_at"`
-	Name         string           `json:"name"`
-	Description  string           `json:"description"`
-	Model        string           `json:"model"`
-	Instructions string           `json:"instructions"`
-	Tools        []AssistantTool  `json:"tools"`
-	FileIDs      []string         `json:"file_ids"`
+	CreatedAt    int               `json:"created_at"`
+	Name         string            `json:"name"`
+	Description  string            `json:"description"`
+	Model        string            `json:"model"`
+	Instructions string            `json:"instructions"`
+	Tools        []AssistantTool   `json:"tools"`
+	FileIDs      []string          `json:"file_ids"`
 	Metadata     map[string]string `json:"metadata"`
 }
 
@@ -62,11 +62,11 @@ type FineTuningJob struct {
 // CreateAssistantRequest represents the request to create an assistant
 type CreateAssistantRequest struct {
 	Name         string            `json:"name"`
-	Description  string           `json:"description"`
-	Model        string           `json:"model"`
-	Instructions string           `json:"instructions"`
-	Tools        []AssistantTool  `json:"tools"`
-	FileIDs      []string         `json:"file_ids"`
+	Description  string            `json:"description"`
+	Model        string            `json:"model"`
+	Instructions string            `json:"instructions"`
+	Tools        []AssistantTool   `json:"tools"`
+	FileIDs      []string          `json:"file_ids"`
 	Metadata     map[string]string `json:"metadata"`
 }
 
@@ -78,9 +78,9 @@ type FileUploadRequest struct {
 
 // CreateFineTuningJobRequest represents a request to create a fine-tuning job
 type CreateFineTuningJobRequest struct {
-	Model          string `json:"model"`
-	TrainingFile   string `json:"training_file"`
-	ValidationFile string `json:"validation_file"`
+	Model           string `json:"model"`
+	TrainingFile    string `json:"training_file"`
+	ValidationFile  string `json:"validation_file"`
 	Hyperparameters struct {
 		NEpochs int `json:"n_epochs"`
 	} `json:"hyperparameters"`

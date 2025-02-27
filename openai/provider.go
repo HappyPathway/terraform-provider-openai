@@ -15,12 +15,19 @@ func Provider() *schema.Provider {
 				Type:        schema.TypeString,
 				Required:    true,
 				Sensitive:   true,
-				Description: "OpenAI API Key",
+				Description: "The OpenAI API key to use for API requests.",
+				DefaultFunc: schema.EnvDefaultFunc("OPENAI_API_KEY", nil),
 			},
-			"organization_id": {
+			"organization": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "OpenAI Organization ID",
+				Description: "The OpenAI organization ID to use for API requests.",
+				DefaultFunc: schema.EnvDefaultFunc("OPENAI_ORGANIZATION_ID", nil),
+			},
+			"base_url": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The base URL to use for API requests. Defaults to https://api.openai.com/v1",
 			},
 			"retry_max": {
 				Type:        schema.TypeInt,
@@ -46,9 +53,16 @@ func Provider() *schema.Provider {
 			"openai_models": dataSourceOpenAIModels(),
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"openai_file":            resourceOpenAIFile(),
-			"openai_assistant":       resourceOpenAIAssistant(),
-			"openai_fine_tuning_job": resourceOpenAIFineTuningJob(),
+			"openai_file":             resourceOpenAIFile(),
+			"openai_assistant":        resourceOpenAIAssistant(),
+			"openai_fine_tuning_job":  resourceOpenAIFineTuningJob(),
+			"openai_completion":       resourceOpenAICompletion(),
+			"openai_embedding":        resourceOpenAIEmbedding(),
+			"openai_image_generation": resourceOpenAIImageGeneration(),
+			"openai_moderation":       resourceOpenAIModeration(),
+			"openai_speech":           resourceOpenAISpeech(),
+			"openai_transcription":    resourceOpenAITranscription(),
+			"openai_translation":      resourceOpenAITranslation(),
 		},
 		ConfigureContextFunc: providerConfigure,
 	}

@@ -5,6 +5,11 @@ default: testacc
 testacc:
 	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
 
+# Run acceptance tests with mock client
+.PHONY: test-mock
+test-mock:
+	OPENAI_MOCK=1 TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
+
 # Run unit tests
 .PHONY: test
 test:

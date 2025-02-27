@@ -1,8 +1,10 @@
 package testutil
 
 import (
+	"context"
 	"os"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -21,22 +23,25 @@ func ProviderFactories(p *schema.Provider) map[string]func() (*schema.Provider, 
 
 // ConfigureProviderWithMockClient returns a provider configured to use the mock client
 func ConfigureProviderWithMockClient(p *schema.Provider) *schema.Provider {
-	// Store original ConfigureFunc
-	originalConfigureFunc := p.ConfigureFunc
+	// Store original ConfigureContextFunc
+	originalConfigureContextFunc := p.ConfigureContextFunc
 
-	// Override ConfigureFunc to inject mock client
-	p.ConfigureFunc = func(d *schema.ResourceData) (interface{}, error) {
-		// Call original ConfigureFunc first
-		if originalConfigureFunc != nil {
-			_, err := originalConfigureFunc(d)
-			if err != nil {
-				return nil, err
+	// Override ConfigureContextFunc to inject mock client
+	p.ConfigureContextFunc = func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
+		// Call original ConfigureContextFunc first if it exists
+		if originalConfigureContextFunc != nil {
+			_, diags := originalConfigureContextFunc(ctx, d)
+			if diags.HasError() {
+				return nil, diags
 			}
 		}
-		
+
 		// Return mock client
 		return NewMockClient(), nil
 	}
+
+	// Clear ConfigureFunc to avoid conflict
+	p.ConfigureFunc = nil
 
 	return p
 }

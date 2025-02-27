@@ -3,6 +3,7 @@ package openai
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -143,6 +144,197 @@ type assistantRequestBody struct {
 	Tools        []AssistantTool   `json:"tools,omitempty"`
 	FileIDs      []string          `json:"file_ids,omitempty"`
 	Metadata     map[string]string `json:"metadata,omitempty"`
+}
+
+// Completion represents an OpenAI completion response
+type Completion struct {
+	ID      string             `json:"id"`
+	Object  string             `json:"object"`
+	Created int64              `json:"created"`
+	Model   string             `json:"model"`
+	Choices []CompletionChoice `json:"choices"`
+	Usage   Usage              `json:"usage"`
+}
+
+// CompletionChoice represents a choice in a completion response
+type CompletionChoice struct {
+	Text         string `json:"text"`
+	Index        int    `json:"index"`
+	FinishReason string `json:"finish_reason"`
+}
+
+// Usage represents token usage information
+type Usage struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
+	TotalTokens      int `json:"total_tokens"`
+}
+
+// CreateCompletionRequest represents parameters for creating a completion
+type CreateCompletionRequest struct {
+	Model            string             `json:"model"`
+	Prompt           string             `json:"prompt"`
+	MaxTokens        int                `json:"max_tokens,omitempty"`
+	Temperature      float64            `json:"temperature,omitempty"`
+	TopP             float64            `json:"top_p,omitempty"`
+	N                int                `json:"n,omitempty"`
+	BestOf           int                `json:"best_of,omitempty"`
+	Stream           bool               `json:"stream,omitempty"`
+	Echo             bool               `json:"echo,omitempty"`
+	Stop             []string           `json:"stop,omitempty"`
+	PresencePenalty  float64            `json:"presence_penalty,omitempty"`
+	FrequencyPenalty float64            `json:"frequency_penalty,omitempty"`
+	LogitBias        map[string]float64 `json:"logit_bias,omitempty"`
+	User             string             `json:"user,omitempty"`
+	Seed             int                `json:"seed,omitempty"`
+	Suffix           string             `json:"suffix,omitempty"`
+}
+
+// Embedding represents an OpenAI embedding response
+type Embedding struct {
+	Object string          `json:"object"`
+	Data   []EmbeddingData `json:"data"`
+	Model  string          `json:"model"`
+	Usage  EmbeddingUsage  `json:"usage"`
+}
+
+// EmbeddingData represents the embedding vector data
+type EmbeddingData struct {
+	Object    string    `json:"object"`
+	Embedding []float64 `json:"embedding"`
+	Index     int       `json:"index"`
+}
+
+// EmbeddingUsage represents token usage for embeddings
+type EmbeddingUsage struct {
+	PromptTokens int `json:"prompt_tokens"`
+	TotalTokens  int `json:"total_tokens"`
+}
+
+// CreateEmbeddingRequest represents parameters for creating embeddings
+type CreateEmbeddingRequest struct {
+	Model          string `json:"model"`
+	Input          string `json:"input"`
+	User           string `json:"user,omitempty"`
+	Dimensions     int    `json:"dimensions,omitempty"`
+	EncodingFormat string `json:"encoding_format,omitempty"`
+}
+
+// CreateImageRequest represents parameters for generating images
+type CreateImageRequest struct {
+	Prompt         string `json:"prompt"`
+	Model          string `json:"model"`
+	N              int    `json:"n,omitempty"`
+	Quality        string `json:"quality,omitempty"`
+	ResponseFormat string `json:"response_format,omitempty"`
+	Size           string `json:"size,omitempty"`
+	Style          string `json:"style,omitempty"`
+	User           string `json:"user,omitempty"`
+}
+
+// ImageResponse represents a response from the image generation API
+type ImageResponse struct {
+	Created int64       `json:"created"`
+	Data    []ImageData `json:"data"`
+}
+
+// ImageData represents generated image data
+type ImageData struct {
+	B64JSON       string `json:"b64_json,omitempty"`
+	URL           string `json:"url,omitempty"`
+	RevisedPrompt string `json:"revised_prompt,omitempty"`
+}
+
+// ModerationCategories represents the categories of harmful content
+type ModerationCategories struct {
+	Harassment            bool `json:"harassment"`
+	HarassmentThreatening bool `json:"harassment/threatening"`
+	Hate                  bool `json:"hate"`
+	HateThreatening       bool `json:"hate/threatening"`
+	Illicit               bool `json:"illicit"`
+	IllicitViolent        bool `json:"illicit/violent"`
+	SelfHarm              bool `json:"self-harm"`
+	SelfHarmInstructions  bool `json:"self-harm/instructions"`
+	SelfHarmIntent        bool `json:"self-harm/intent"`
+	Sexual                bool `json:"sexual"`
+	SexualMinors          bool `json:"sexual/minors"`
+	Violence              bool `json:"violence"`
+	ViolenceGraphic       bool `json:"violence/graphic"`
+}
+
+// ModerationCategoryScores represents the scores for each category
+type ModerationCategoryScores struct {
+	Harassment            float64 `json:"harassment"`
+	HarassmentThreatening float64 `json:"harassment/threatening"`
+	Hate                  float64 `json:"hate"`
+	HateThreatening       float64 `json:"hate/threatening"`
+	Illicit               float64 `json:"illicit"`
+	IllicitViolent        float64 `json:"illicit/violent"`
+	SelfHarm              float64 `json:"self-harm"`
+	SelfHarmInstructions  float64 `json:"self-harm/instructions"`
+	SelfHarmIntent        float64 `json:"self-harm/intent"`
+	Sexual                float64 `json:"sexual"`
+	SexualMinors          float64 `json:"sexual/minors"`
+	Violence              float64 `json:"violence"`
+	ViolenceGraphic       float64 `json:"violence/graphic"`
+}
+
+// ModerationResult represents a single moderation result
+type ModerationResult struct {
+	Flagged        bool                     `json:"flagged"`
+	Categories     ModerationCategories     `json:"categories"`
+	CategoryScores ModerationCategoryScores `json:"category_scores"`
+}
+
+// ModerationResponse represents the response from the moderation API
+type ModerationResponse struct {
+	ID      string             `json:"id"`
+	Model   string             `json:"model"`
+	Results []ModerationResult `json:"results"`
+}
+
+// CreateModerationRequest represents the parameters for creating a moderation
+type CreateModerationRequest struct {
+	Input string `json:"input"`
+	Model string `json:"model,omitempty"`
+}
+
+// CreateSpeechRequest represents parameters for generating speech
+type CreateSpeechRequest struct {
+	Input          string  `json:"input"`
+	Model          string  `json:"model"`
+	Voice          string  `json:"voice"`
+	ResponseFormat string  `json:"response_format,omitempty"`
+	Speed          float64 `json:"speed,omitempty"`
+}
+
+// TranscriptionRequest represents parameters for transcribing audio
+type TranscriptionRequest struct {
+	File           []byte  `json:"file"`
+	Model          string  `json:"model"`
+	Language       string  `json:"language,omitempty"`
+	Prompt         string  `json:"prompt,omitempty"`
+	ResponseFormat string  `json:"response_format,omitempty"`
+	Temperature    float64 `json:"temperature,omitempty"`
+}
+
+// TranscriptionResponse represents the response from a transcription request
+type TranscriptionResponse struct {
+	Text string `json:"text"`
+}
+
+// TranslationRequest represents parameters for translating audio
+type TranslationRequest struct {
+	File           []byte  `json:"file"`
+	Model          string  `json:"model"`
+	Prompt         string  `json:"prompt,omitempty"`
+	ResponseFormat string  `json:"response_format,omitempty"`
+	Temperature    float64 `json:"temperature,omitempty"`
+}
+
+// TranslationResponse represents the response from a translation request
+type TranslationResponse struct {
+	Text string `json:"text"`
 }
 
 // NewClient creates a new OpenAI API client
@@ -633,4 +825,356 @@ func (c *Client) CancelFineTuningJob(ctx context.Context, jobID string) (*FineTu
 	}
 
 	return &job, nil
+}
+
+// CreateCompletion creates a completion
+func (c *Client) CreateCompletion(ctx context.Context, req *CreateCompletionRequest) (*Completion, error) {
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling request: %v", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/completions", c.baseURL), bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %v", err)
+	}
+
+	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.apiKey))
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.doRequest(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, respBody)
+	}
+
+	var completion Completion
+	if err := json.Unmarshal(respBody, &completion); err != nil {
+		return nil, fmt.Errorf("error parsing response: %v", err)
+	}
+
+	return &completion, nil
+}
+
+// CreateEmbedding creates embeddings for the given input
+func (c *Client) CreateEmbedding(ctx context.Context, req *CreateEmbeddingRequest) (*Embedding, error) {
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling request: %v", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/embeddings", c.baseURL), bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %v", err)
+	}
+
+	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.apiKey))
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.doRequest(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, respBody)
+	}
+
+	var embedding Embedding
+	if err := json.Unmarshal(respBody, &embedding); err != nil {
+		return nil, fmt.Errorf("error parsing response: %v", err)
+	}
+
+	return &embedding, nil
+}
+
+// CreateImage generates images using DALL·E models
+func (c *Client) CreateImage(ctx context.Context, req *CreateImageRequest) (*ImageResponse, error) {
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling request: %v", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/images/generations", c.baseURL), bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %v", err)
+	}
+
+	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.apiKey))
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.doRequest(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, respBody)
+	}
+
+	var imageResponse ImageResponse
+	if err := json.Unmarshal(respBody, &imageResponse); err != nil {
+		return nil, fmt.Errorf("error parsing response: %v", err)
+	}
+
+	return &imageResponse, nil
+}
+
+// CreateModeration creates a new moderation
+func (c *Client) CreateModeration(ctx context.Context, req *CreateModerationRequest) (*ModerationResponse, error) {
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling request: %v", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/moderations", c.baseURL), bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %v", err)
+	}
+
+	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.apiKey))
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.doRequest(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, respBody)
+	}
+
+	var moderation ModerationResponse
+	if err := json.Unmarshal(respBody, &moderation); err != nil {
+		return nil, fmt.Errorf("error parsing response: %v", err)
+	}
+
+	return &moderation, nil
+}
+
+// CreateSpeech generates audio from the input text
+func (c *Client) CreateSpeech(ctx context.Context, req *CreateSpeechRequest) (string, error) {
+	body, err := json.Marshal(req)
+	if err != nil {
+		return "", fmt.Errorf("error marshaling request: %v", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/audio/speech", c.baseURL), bytes.NewReader(body))
+	if err != nil {
+		return "", fmt.Errorf("error creating request: %v", err)
+	}
+
+	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.apiKey))
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.doRequest(httpReq)
+	if err != nil {
+		return "", fmt.Errorf("error making request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("error reading response: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, respBody)
+	}
+
+	// Convert audio bytes to base64
+	return base64.StdEncoding.EncodeToString(respBody), nil
+}
+
+// CreateTranscription transcribes audio into text
+func (c *Client) CreateTranscription(ctx context.Context, req *TranscriptionRequest) (*TranscriptionResponse, error) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	// Add the file
+	part, err := writer.CreateFormFile("file", "audio.mp3")
+	if err != nil {
+		return nil, fmt.Errorf("error creating form file: %v", err)
+	}
+	if _, err := part.Write(req.File); err != nil {
+		return nil, fmt.Errorf("error writing file data: %v", err)
+	}
+
+	// Add other fields
+	if err := writer.WriteField("model", req.Model); err != nil {
+		return nil, fmt.Errorf("error writing model field: %v", err)
+	}
+	if req.Language != "" {
+		if err := writer.WriteField("language", req.Language); err != nil {
+			return nil, fmt.Errorf("error writing language field: %v", err)
+		}
+	}
+	if req.Prompt != "" {
+		if err := writer.WriteField("prompt", req.Prompt); err != nil {
+			return nil, fmt.Errorf("error writing prompt field: %v", err)
+		}
+	}
+	if req.ResponseFormat != "" {
+		if err := writer.WriteField("response_format", req.ResponseFormat); err != nil {
+			return nil, fmt.Errorf("error writing response_format field: %v", err)
+		}
+	}
+	if req.Temperature != 0 {
+		if err := writer.WriteField("temperature", fmt.Sprintf("%f", req.Temperature)); err != nil {
+			return nil, fmt.Errorf("error writing temperature field: %v", err)
+		}
+	}
+
+	if err := writer.Close(); err != nil {
+		return nil, fmt.Errorf("error closing writer: %v", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/audio/transcriptions", c.baseURL), body)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %v", err)
+	}
+
+	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.apiKey))
+	httpReq.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp, err := c.doRequest(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, respBody)
+	}
+
+	var transcription TranscriptionResponse
+	if err := json.Unmarshal(respBody, &transcription); err != nil {
+		return nil, fmt.Errorf("error parsing response: %v", err)
+	}
+
+	return &transcription, nil
+}
+
+// CreateTranslation translates audio into English text
+func (c *Client) CreateTranslation(ctx context.Context, req *TranslationRequest) (*TranslationResponse, error) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	// Add the file
+	part, err := writer.CreateFormFile("file", "audio.mp3")
+	if err != nil {
+		return nil, fmt.Errorf("error creating form file: %v", err)
+	}
+	if _, err := part.Write(req.File); err != nil {
+		return nil, fmt.Errorf("error writing file data: %v", err)
+	}
+
+	// Add other fields
+	if err := writer.WriteField("model", req.Model); err != nil {
+		return nil, fmt.Errorf("error writing model field: %v", err)
+	}
+	if req.Prompt != "" {
+		if err := writer.WriteField("prompt", req.Prompt); err != nil {
+			return nil, fmt.Errorf("error writing prompt field: %v", err)
+		}
+	}
+	if req.ResponseFormat != "" {
+		if err := writer.WriteField("response_format", req.ResponseFormat); err != nil {
+			return nil, fmt.Errorf("error writing response_format field: %v", err)
+		}
+	}
+	if req.Temperature != 0 {
+		if err := writer.WriteField("temperature", fmt.Sprintf("%f", req.Temperature)); err != nil {
+			return nil, fmt.Errorf("error writing temperature field: %v", err)
+		}
+	}
+
+	if err := writer.Close(); err != nil {
+		return nil, fmt.Errorf("error closing writer: %v", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/audio/translations", c.baseURL), body)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %v", err)
+	}
+
+	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.apiKey))
+	httpReq.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp, err := c.doRequest(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, respBody)
+	}
+
+	var translation TranslationResponse
+	if err := json.Unmarshal(respBody, &translation); err != nil {
+		return nil, fmt.Errorf("error parsing response: %v", err)
+	}
+
+	return &translation, nil
+}
+
+// ClientInterface defines the interface that both our real and mock clients must implement
+type ClientInterface interface {
+	GetModel(ctx context.Context, modelID string) (*Model, error)
+	ListModels(ctx context.Context) ([]Model, error)
+	UploadFile(ctx context.Context, req *FileUploadRequest) (*File, error)
+	GetFile(ctx context.Context, fileID string) (*File, error)
+	DeleteFile(ctx context.Context, fileID string) error
+	CreateAssistant(ctx context.Context, req *CreateAssistantRequest) (*Assistant, error)
+	GetAssistant(ctx context.Context, assistantID string) (*Assistant, error)
+	UpdateAssistant(ctx context.Context, assistantID string, req *CreateAssistantRequest) (*Assistant, error)
+	DeleteAssistant(ctx context.Context, assistantID string) error
+	CreateFineTuningJob(ctx context.Context, req *CreateFineTuningJobRequest) (*FineTuningJob, error)
+	GetFineTuningJob(ctx context.Context, jobID string) (*FineTuningJob, error)
+	CancelFineTuningJob(ctx context.Context, jobID string) (*FineTuningJob, error)
+	CreateCompletion(ctx context.Context, req *CreateCompletionRequest) (*Completion, error)
+	CreateEmbedding(ctx context.Context, req *CreateEmbeddingRequest) (*Embedding, error)
+	CreateImage(ctx context.Context, req *CreateImageRequest) (*ImageResponse, error)
+	CreateModeration(ctx context.Context, req *CreateModerationRequest) (*ModerationResponse, error)
+	CreateSpeech(ctx context.Context, req *CreateSpeechRequest) (string, error)
+	CreateTranscription(ctx context.Context, req *TranscriptionRequest) (*TranscriptionResponse, error)
+	CreateTranslation(ctx context.Context, req *TranslationRequest) (*TranslationResponse, error)
 }

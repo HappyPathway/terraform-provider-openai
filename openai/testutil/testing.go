@@ -7,20 +7,26 @@ import (
 
 // PreCheck verifies required test env vars are set
 func PreCheck(t *testing.T) {
-	if v := os.Getenv("OPENAI_API_KEY"); v == "" {
-		t.Fatal("OPENAI_API_KEY must be set for acceptance tests")
+	if os.Getenv("OPENAI_MOCK") == "" {
+		// Only check API key when not using mocks
+		if v := os.Getenv("OPENAI_API_KEY"); v == "" {
+			t.Fatal("OPENAI_API_KEY must be set for acceptance tests")
+		}
 	}
 }
 
-// ProviderFactories returns a map of provider factories for testing
+// ProviderTestPreCheck verifies testing variables are set
 func ProviderTestPreCheck(t *testing.T) {
-	if v := os.Getenv("TF_VAR_project_prompt"); v == "" {
-		t.Skip("TF_VAR_project_prompt not set")
-	}
-	if v := os.Getenv("TF_VAR_repo_org"); v == "" {
-		t.Skip("TF_VAR_repo_org not set") 
-	}
-	if v := os.Getenv("TF_VAR_project_name"); v == "" {
-		t.Skip("TF_VAR_project_name not set")
+	if os.Getenv("OPENAI_MOCK") == "" {
+		// Only check project variables when not using mocks
+		if v := os.Getenv("TF_VAR_project_prompt"); v == "" {
+			t.Skip("TF_VAR_project_prompt not set")
+		}
+		if v := os.Getenv("TF_VAR_repo_org"); v == "" {
+			t.Skip("TF_VAR_repo_org not set")
+		}
+		if v := os.Getenv("TF_VAR_project_name"); v == "" {
+			t.Skip("TF_VAR_project_name not set")
+		}
 	}
 }
