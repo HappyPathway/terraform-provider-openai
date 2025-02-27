@@ -2,7 +2,9 @@ package openai
 
 import (
 	"context"
+	"encoding/json"
 
+	"github.com/HappyPathway/terraform-provider-openai/openai/testutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -35,7 +37,7 @@ func resourceOpenAIAssistant() *schema.Resource {
 				Description: "System instructions that the assistant uses",
 			},
 			"tools": {
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -43,6 +45,31 @@ func resourceOpenAIAssistant() *schema.Resource {
 							Type:        schema.TypeString,
 							Required:    true,
 							Description: "The type of tool",
+						},
+						"function": {
+							Type:     schema.TypeList,
+							Optional: true,
+							MaxItems: 1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "The name of the function",
+									},
+									"description": {
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "The description of what the function does",
+									},
+									"parameters": {
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "The parameters the functions accepts (JSON encoded string)",
+									},
+								},
+							},
+							Description: "The function definition when type is 'function'",
 						},
 					},
 					Description: "The tools that the assistant can use",
@@ -73,10 +100,18 @@ func resourceOpenAIAssistant() *schema.Resource {
 	}
 }
 
-func resourceOpenAIAssistantCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+func parseParameters(parametersStr string) (map[string]interface{}, error) {
+	var parameters map[string]interface{}
+	if err := json.Unmarshal([]byte(parametersStr), &parameters); err != nil {
+		return nil, err
+	}
+	return parameters, nil
+}
 
-	req := &CreateAssistantRequest{
+func resourceOpenAIAssistantCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	client := m.(testutil.ClientInterface)
+
+	req := &testutil.CreateAssistantRequest{
 		Name:         d.Get("name").(string),
 		Model:        d.Get("model").(string),
 		Description:  d.Get("description").(string),
@@ -84,11 +119,29 @@ func resourceOpenAIAssistantCreate(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	if v, ok := d.GetOk("tools"); ok {
-		tools := make([]AssistantTool, len(v.(*schema.Set).List()))
-		for i, tool := range v.(*schema.Set).List() {
+		toolsList := v.([]interface{})
+		tools := make([]testutil.AssistantTool, len(toolsList))
+		for i, tool := range toolsList {
 			toolMap := tool.(map[string]interface{})
-			tools[i] = AssistantTool{
+			tools[i] = testutil.AssistantTool{
 				Type: toolMap["type"].(string),
+			}
+
+			// Handle function tool type
+			if tools[i].Type == "function" && toolMap["function"] != nil {
+				functionList := toolMap["function"].([]interface{})
+				if len(functionList) > 0 {
+					function := functionList[0].(map[string]interface{})
+					parameters, err := parseParameters(function["parameters"].(string))
+					if err != nil {
+						return diag.FromErr(err)
+					}
+					tools[i].Function = &testutil.AssistantFunction{
+						Name:        function["name"].(string),
+						Description: function["description"].(string),
+						Parameters:  parameters,
+					}
+				}
 			}
 		}
 		req.Tools = tools
@@ -121,7 +174,7 @@ func resourceOpenAIAssistantCreate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func resourceOpenAIAssistantRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+	client := m.(testutil.ClientInterface)
 
 	assistant, err := client.GetAssistant(ctx, d.Id())
 	if err != nil {
@@ -136,9 +189,20 @@ func resourceOpenAIAssistantRead(ctx context.Context, d *schema.ResourceData, m 
 
 	tools := make([]interface{}, len(assistant.Tools))
 	for i, tool := range assistant.Tools {
-		tools[i] = map[string]interface{}{
+		toolMap := map[string]interface{}{
 			"type": tool.Type,
 		}
+
+		if tool.Function != nil {
+			toolMap["function"] = []interface{}{
+				map[string]interface{}{
+					"name":        tool.Function.Name,
+					"description": tool.Function.Description,
+					"parameters":  tool.Function.Parameters,
+				},
+			}
+		}
+		tools[i] = toolMap
 	}
 	d.Set("tools", tools)
 
@@ -149,9 +213,9 @@ func resourceOpenAIAssistantRead(ctx context.Context, d *schema.ResourceData, m 
 }
 
 func resourceOpenAIAssistantUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+	client := m.(testutil.ClientInterface)
 
-	req := &CreateAssistantRequest{
+	req := &testutil.CreateAssistantRequest{
 		Name:         d.Get("name").(string),
 		Model:        d.Get("model").(string),
 		Description:  d.Get("description").(string),
@@ -159,11 +223,29 @@ func resourceOpenAIAssistantUpdate(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	if v, ok := d.GetOk("tools"); ok {
-		tools := make([]AssistantTool, len(v.(*schema.Set).List()))
-		for i, tool := range v.(*schema.Set).List() {
+		toolsList := v.([]interface{})
+		tools := make([]testutil.AssistantTool, len(toolsList))
+		for i, tool := range toolsList {
 			toolMap := tool.(map[string]interface{})
-			tools[i] = AssistantTool{
+			tools[i] = testutil.AssistantTool{
 				Type: toolMap["type"].(string),
+			}
+
+			// Handle function tool type
+			if tools[i].Type == "function" && toolMap["function"] != nil {
+				functionList := toolMap["function"].([]interface{})
+				if len(functionList) > 0 {
+					function := functionList[0].(map[string]interface{})
+					parameters, err := parseParameters(function["parameters"].(string))
+					if err != nil {
+						return diag.FromErr(err)
+					}
+					tools[i].Function = &testutil.AssistantFunction{
+						Name:        function["name"].(string),
+						Description: function["description"].(string),
+						Parameters:  parameters,
+					}
+				}
 			}
 		}
 		req.Tools = tools
@@ -194,7 +276,7 @@ func resourceOpenAIAssistantUpdate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func resourceOpenAIAssistantDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+	client := m.(testutil.ClientInterface)
 
 	err := client.DeleteAssistant(ctx, d.Id())
 	if err != nil {

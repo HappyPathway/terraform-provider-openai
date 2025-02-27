@@ -15,12 +15,19 @@ func Provider() *schema.Provider {
 				Type:        schema.TypeString,
 				Required:    true,
 				Sensitive:   true,
-				Description: "OpenAI API Key",
+				Description: "The OpenAI API key to use for API requests.",
+				DefaultFunc: schema.EnvDefaultFunc("OPENAI_API_KEY", nil),
 			},
-			"organization_id": {
+			"organization": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "OpenAI Organization ID",
+				Description: "The OpenAI organization ID to use for API requests.",
+				DefaultFunc: schema.EnvDefaultFunc("OPENAI_ORGANIZATION_ID", nil),
+			},
+			"base_url": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The base URL to use for API requests. Defaults to https://api.openai.com/v1",
 			},
 			"retry_max": {
 				Type:        schema.TypeInt,
@@ -46,27 +53,45 @@ func Provider() *schema.Provider {
 			"openai_models": dataSourceOpenAIModels(),
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"openai_file":            resourceOpenAIFile(),
-			"openai_assistant":       resourceOpenAIAssistant(),
-			"openai_fine_tuning_job": resourceOpenAIFineTuningJob(),
+			"openai_file":              resourceOpenAIFile(),
+			"openai_assistant":         resourceOpenAIAssistant(),
+			"openai_fine_tuning_job":   resourceOpenAIFineTuningJob(),
+			"openai_completion":        resourceOpenAICompletion(),
+			"openai_embedding":         resourceOpenAIEmbedding(),
+			"openai_image_generation":  resourceOpenAIImageGeneration(),
+			"openai_moderation":        resourceOpenAIModeration(),
+			"openai_speech":            resourceOpenAISpeech(),
+			"openai_transcription":     resourceOpenAITranscription(),
+			"openai_translation":       resourceOpenAITranslation(),
+			"openai_content_generator": ResourceOpenAIContentGenerator(),
 		},
 		ConfigureContextFunc: providerConfigure,
 	}
 }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	apiKey := d.Get("api_key")
+	if apiKey == nil {
+		return nil, diag.Errorf("api_key is required")
+	}
+
 	config := ClientConfig{
-		APIKey:     d.Get("api_key").(string),
+		APIKey:     apiKey.(string),
 		RetryMax:   d.Get("retry_max").(int),
 		RetryDelay: time.Duration(d.Get("retry_delay").(int)) * time.Second,
 		Timeout:    time.Duration(d.Get("timeout").(int)) * time.Second,
 	}
 
-	if v, ok := d.GetOk("organization_id"); ok {
-		// Organization ID will be used in a future implementation
-		_ = v.(string)
+	if v, ok := d.GetOk("organization"); ok {
+		config.Organization = v.(string)
+	}
+
+	if v, ok := d.GetOk("base_url"); ok {
+		config.BaseURL = v.(string)
 	}
 
 	client := NewClientWithConfig(config)
-	return client, nil
+	return client, diags
 }

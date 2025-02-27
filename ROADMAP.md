@@ -1,104 +1,74 @@
-# OpenAI Provider Roadmap
+# Terraform Provider OpenAI Roadmap
 
-## Phase 1: Core Resources (Initial Release)
+This document outlines the current state and future plans for the OpenAI Terraform provider.
 
-### Authentication & Configuration
-- [x] Basic provider configuration with API key
-- [ ] Organization ID support
-- [x] API request retry and timeout configurations
+## Currently Implemented Resources
 
-### Resources
-- [ ] `openai_completion` - Manage text completions
-- [ ] `openai_chat_completion` - Manage chat completions
-- [x] `openai_fine_tuning_job` - Manage fine-tuning jobs (Implementation complete, testing in progress)
-- [x] `openai_assistant` - Manage OpenAI assistants
-- [x] `openai_file` - Manage files for fine-tuning and assistants
+### Core Resources
+- `openai_assistant` - Manages OpenAI assistants with various capabilities
+- `openai_file` - Manages file uploads for use with various OpenAI features
+- `openai_fine_tuning_job` - Manages fine-tuning jobs for customizing models
+- `openai_model` (Data Source) - For retrieving available models and their capabilities
+- `openai_models` (Data Source) - For listing and filtering available models
+- `openai_embedding` (Resource) - For managing text embedding configurations
+- `openai_image_generation` (Resource) - For managing DALL-E image generation configurations
+- `openai_moderation` (Resource) - For managing content moderation configurations
 
-### Data Sources
-- [x] `openai_model` - Information about available models
-- [x] `openai_models` - List of available models
-- [ ] `openai_file` - Information about uploaded files
+### Audio Resources
+- `openai_speech` (Resource) - For managing text-to-speech configurations
+- `openai_transcription` (Resource) - For managing audio transcription configurations
+- `openai_translation` (Resource) - For managing audio translation configurations
 
-## Current Focus: Testing & Stability
+## In Progress Resources
 
-### Testing Requirements
-- [x] Basic acceptance test structure
-- [ ] Test environment variable configuration
-  - Required variables: TF_VAR_project_prompt, TF_VAR_repo_org, TF_VAR_project_name
-- [ ] Test data preparation
-- [ ] Mock API responses for tests that require paid features
+### Beta API Resources
+- `openai_vector_store` - For managing vector storage configurations
+  - Implementation started with basic CRUD operations
+  - File management and batch operations support in development
+- `openai_thread` - For managing conversation threads
+  - Core implementation underway with support for basic operations
+- `openai_thread_message` - For managing messages within threads
+  - Basic structure defined, implementation in progress
+- `openai_thread_run` - For managing assistant runs on threads
+  - Initial implementation started
 
-### Immediate Next Steps
-1. Update test configurations to work without GitHub Pro features
-2. Implement mock responses for fine-tuning job tests
-3. Document required test environment variables
-4. Add validation for required test configuration
+## Upcoming Features
 
-## Phase 2: Extended Resources
+### Core API Enhancements
+- Enhanced error handling and validation for all resources
+- Improved documentation with more examples and use cases
+- Better support for OpenAI API versioning
+- Implementation of resource import functionality
 
-### Resources
-- [ ] `openai_assistant_file` - Manage files attached to assistants
-- [ ] `openai_thread` - Manage persistent threads for conversations
-- [ ] `openai_deployment` - Manage model deployments (Azure OpenAI)
-- [ ] `openai_embedding` - Generate and manage embeddings
+### Integration Improvements
+- Better integration with other HashiCorp products
+- Support for OpenAI organization management
+- Enhanced monitoring and logging capabilities
 
-### Data Sources
-- [ ] `openai_fine_tuning_job` - Information about fine-tuning jobs
-- [ ] `openai_assistant` - Information about existing assistants
-- [ ] `openai_files` - List of uploaded files
+## Implementation Priority
 
-## Phase 3: Advanced Features
+1. Complete Beta API Resources
+   - Focus on stabilizing vector store implementation
+   - Complete thread-related resources implementation
+   - Add comprehensive testing for Beta features
 
-### Resources
-- [ ] `openai_fine_tuned_model` - Manage custom fine-tuned models
-- [ ] `openai_assistant_tool` - Manage tools for assistants
-- [ ] `openai_message` - Manage messages in threads
-
-### Data Sources
-- [ ] `openai_deployment` - Information about model deployments
-- [ ] `openai_deployments` - List of model deployments
-- [ ] `openai_usage` - Usage statistics and quotas
-
-## Future Considerations
-
-### Potential Features
-- Azure OpenAI Service support
-- Rate limiting and quota management
-- Batch operations support
-- Cost estimation and management
-- Monitoring and logging integrations
-
-### Integration Points
-- [ ] Integration with Azure OpenAI Service
-- [ ] Integration with AWS Bedrock
-- [ ] Support for organization management
-- [ ] Support for team-level access controls
-
-## Implementation Notes
-
-### Priority Order
-1. [x] Core authentication and configuration
-2. [x] Basic model and file management
-3. [ ] Stabilize existing resource tests
-4. [ ] Completion and Chat APIs support
-5. [ ] Assistant and fine-tuning support
-6. [ ] Extended features and integrations
-
-### Development Guidelines
-- Each resource/data source will include:
-  - Complete documentation
-  - Example configurations
-  - Acceptance tests that work without paid features
-  - Import support where applicable
-  - Proper error handling
-  - Rate limiting consideration
-
-### Testing Strategy
-- Unit tests for all resources and data sources
-- Acceptance tests using minimal API features
-- Mock responses for paid features
-- Documentation examples as tests
-- Environment variable configuration guide
+2. Core API Enhancements
+   - Implement remaining planned features
+   - Improve existing resource functionality
+   - Update documentation and examples
 
 ## Contributing
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on contributing to the provider.
+
+We welcome contributions to help implement any of these planned resources. When contributing:
+
+1. Ensure comprehensive test coverage
+2. Follow HashiCorp best practices for provider development
+3. Document any OpenAI API version dependencies
+4. Include examples in the provider documentation
+
+## Notes
+
+- Implementation timeline may be adjusted based on OpenAI API changes
+- Beta features are subject to API changes from OpenAI
+- Breaking changes in the OpenAI API may require major version bumps
+- Some features may be limited by the OpenAI API's capabilities and restrictions
