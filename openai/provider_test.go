@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
 	"github.com/HappyPathway/terraform-provider-openai/openai/testutil"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 var testAccProviders map[string]*schema.Provider
@@ -27,7 +27,7 @@ func init() {
 		"openai": func() (*schema.Provider, error) {
 			p := Provider()
 			if useMockClient {
-				p.ConfigureContextFunc = func(ctx context.Context, d *schema.ResourceData) (interface{}, error) {
+				p.ConfigureContextFunc = func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 					return testutil.NewMockClient(), nil
 				}
 			}
