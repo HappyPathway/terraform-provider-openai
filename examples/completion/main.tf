@@ -8,13 +8,15 @@ terraform {
 
 provider "openai" {}
 
-resource "openai_completion" "story" {
-  model       = "gpt-3.5-turbo-instruct"
-  prompt      = "Write a short story about AI and Terraform"
-  max_tokens  = 150
+resource "openai_content_generator" "story" {
+  model       = "gpt-3.5-turbo"
+  messages {
+    role    = "user"
+    content = "Write a short story about AI and Terraform"
+  }
   temperature = 0.7
 }
 
 output "story" {
-  value = openai_completion.story.choices[0].text
+  value = openai_content_generator.story.content
 }

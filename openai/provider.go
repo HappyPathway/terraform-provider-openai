@@ -46,9 +46,10 @@ func Provider() *schema.Provider {
 			"openai_models": dataSourceOpenAIModels(),
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"openai_file":            resourceOpenAIFile(),
-			"openai_assistant":       resourceOpenAIAssistant(),
-			"openai_fine_tuning_job": resourceOpenAIFineTuningJob(),
+			"openai_file":              resourceOpenAIFile(),
+			"openai_assistant":         resourceOpenAIAssistant(),
+			"openai_fine_tuning_job":   resourceOpenAIFineTuningJob(),
+			"openai_content_generator": ResourceOpenAIContentGenerator(),
 		},
 		ConfigureContextFunc: providerConfigure,
 	}

@@ -145,6 +145,39 @@ type assistantRequestBody struct {
 	Metadata     map[string]string `json:"metadata,omitempty"`
 }
 
+// Chat completion types
+type ChatCompletionMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type ChatCompletionChoice struct {
+	Message      ChatCompletionMessage `json:"message"`
+	FinishReason string                `json:"finish_reason"`
+}
+
+type CompletionUsage struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
+	TotalTokens      int `json:"total_tokens"`
+}
+
+type ChatCompletion struct {
+	ID      string                 `json:"id"`
+	Object  string                 `json:"object"`
+	Created int64                  `json:"created"`
+	Model   string                 `json:"model"`
+	Usage   CompletionUsage        `json:"usage"`
+	Choices []ChatCompletionChoice `json:"choices"`
+}
+
+type CreateChatCompletionRequest struct {
+	Model          string                  `json:"model"`
+	Messages       []ChatCompletionMessage `json:"messages"`
+	Temperature    float32                 `json:"temperature,omitempty"`
+	ResponseFormat map[string]string       `json:"response_format,omitempty"`
+}
+
 // NewClient creates a new OpenAI API client
 func NewClient(apiKey string) *Client {
 	return NewClientWithConfig(ClientConfig{
@@ -633,4 +666,42 @@ func (c *Client) CancelFineTuningJob(ctx context.Context, jobID string) (*FineTu
 	}
 
 	return &job, nil
+}
+
+// CreateChatCompletion creates a new chat completion
+func (c *Client) CreateChatCompletion(ctx context.Context, req *CreateChatCompletionRequest) (*ChatCompletion, error) {
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling request: %v", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/chat/completions", c.baseURL), bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %v", err)
+	}
+
+	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.apiKey))
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.doRequest(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, respBody)
+	}
+
+	var completion ChatCompletion
+	if err := json.Unmarshal(respBody, &completion); err != nil {
+		return nil, fmt.Errorf("error parsing response: %v", err)
+	}
+
+	return &completion, nil
 }

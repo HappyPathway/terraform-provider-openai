@@ -19,15 +19,11 @@ resource "openai_file" "training_data" {
 resource "openai_fine_tuning_job" "custom_model" {
   model          = "gpt-3.5-turbo"
   training_file  = openai_file.training_data.id
-  
-  hyperparameters = {
-    n_epochs = 3
-  }
 }
 
 # Optional: Data source to check available models
 data "openai_model" "fine_tuned" {
-  id = openai_fine_tuning_job.custom_model.fine_tuned_model
+  model_id = openai_fine_tuning_job.custom_model
 }
 
 output "fine_tuned_model" {
