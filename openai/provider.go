@@ -43,8 +43,9 @@ func Provider() *schema.Provider {
 			},
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"openai_model":  dataSourceOpenAIModel(),
-			"openai_models": dataSourceOpenAIModels(),
+			"openai_model":     dataSourceOpenAIModel(),
+			"openai_models":    dataSourceOpenAIModels(),
+			"openai_assistant": dataSourceOpenAIAssistant(),
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"openai_file":              resourceOpenAIFile(),
