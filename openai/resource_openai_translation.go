@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"github.com/HappyPathway/terraform-provider-openai/openai/testutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -34,7 +35,7 @@ func resourceOpenAITranslation() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
-				Description: "Optional text to guide the model's style or continue a previous audio segment. Should be in English.",
+				Description: "Optional text to guide the model's style or continue a previous audio segment.",
 			},
 			"response_format": {
 				Type:         schema.TypeString,
@@ -42,7 +43,7 @@ func resourceOpenAITranslation() *schema.Resource {
 				ForceNew:     true,
 				Default:      "text",
 				ValidateFunc: validation.StringInSlice([]string{"json", "text", "srt", "verbose_json", "vtt"}, false),
-				Description:  "The format of the translation output. Must be one of: json, text, srt, verbose_json, or vtt.",
+				Description:  "The format of the translated output. Must be one of: json, text, srt, verbose_json, or vtt.",
 			},
 			"temperature": {
 				Type:         schema.TypeFloat,
@@ -55,27 +56,27 @@ func resourceOpenAITranslation() *schema.Resource {
 			"text": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The translated text in English.",
+				Description: "The translated text.",
 			},
 		},
 	}
 }
 
 func resourceOpenAITranslationCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+	client := m.(testutil.ClientInterface)
 
-	audioContent := d.Get("audio_content").(string)
-	audioBytes, err := base64.StdEncoding.DecodeString(audioContent)
+	fileContent := d.Get("audio_content").(string)
+	fileBytes, err := base64.StdEncoding.DecodeString(fileContent)
 	if err != nil {
 		return diag.FromErr(fmt.Errorf("error decoding audio content: %v", err))
 	}
 
-	req := &TranslationRequest{
-		File:           audioBytes,
+	req := &testutil.TranslationRequest{
+		File:           fileBytes,
 		Model:          d.Get("model").(string),
 		Prompt:         d.Get("prompt").(string),
 		ResponseFormat: d.Get("response_format").(string),
-		Temperature:    d.Get("temperature").(float64),
+		Temperature:    float32(d.Get("temperature").(float64)),
 	}
 
 	resp, err := client.CreateTranslation(ctx, req)
@@ -84,7 +85,7 @@ func resourceOpenAITranslationCreate(ctx context.Context, d *schema.ResourceData
 	}
 
 	// Set ID to a hash of the audio content
-	d.SetId(fmt.Sprintf("%x", audioBytes[:16]))
+	d.SetId(fmt.Sprintf("%x", fileBytes[:16]))
 
 	// Set the translated text
 	d.Set("text", resp.Text)

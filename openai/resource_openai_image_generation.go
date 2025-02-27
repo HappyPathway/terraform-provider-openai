@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/HappyPathway/terraform-provider-openai/openai/testutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -103,9 +104,9 @@ func resourceOpenAIImageGeneration() *schema.Resource {
 }
 
 func resourceOpenAIImageGenerationCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+	client := m.(testutil.ClientInterface)
 
-	req := &CreateImageRequest{
+	req := &testutil.CreateImageRequest{
 		Prompt:         d.Get("prompt").(string),
 		Model:          d.Get("model").(string),
 		N:              d.Get("n").(int),

@@ -2,7 +2,9 @@ package openai
 
 import (
 	"context"
+	"strings"
 
+	"github.com/HappyPathway/terraform-provider-openai/openai/testutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -11,6 +13,11 @@ func dataSourceOpenAIModels() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceOpenAIModelsRead,
 		Schema: map[string]*schema.Schema{
+			"filter_prefix": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Filter models by ID prefix",
+			},
 			"models": {
 				Type:     schema.TypeList,
 				Computed: true,
@@ -64,11 +71,22 @@ func dataSourceOpenAIModels() *schema.Resource {
 }
 
 func dataSourceOpenAIModelsRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+	client := m.(testutil.ClientInterface)
 
 	models, err := client.ListModels(ctx)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	prefix := d.Get("filter_prefix").(string)
+	var filteredModels []testutil.Model
+	if prefix != "" {
+		for _, model := range models {
+			if strings.HasPrefix(model.ID, prefix) {
+				filteredModels = append(filteredModels, model)
+			}
+		}
+		models = filteredModels
 	}
 
 	modelsList := make([]interface{}, len(models))

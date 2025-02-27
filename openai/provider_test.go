@@ -5,22 +5,33 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/HappyPathway/terraform-provider-openai/openai/testutil"
 )
 
 var testAccProviders map[string]*schema.Provider
 var testAccProvider *schema.Provider
 var providerFactories map[string]func() (*schema.Provider, error)
+var useMockClient bool
 
 func init() {
+	useMockClient = os.Getenv("OPENAI_USE_MOCK") != ""
+
 	testAccProvider = Provider()
 	testAccProviders = map[string]*schema.Provider{
 		"openai": testAccProvider,
 	}
+
 	providerFactories = map[string]func() (*schema.Provider, error){
 		"openai": func() (*schema.Provider, error) {
-			return Provider(), nil
+			p := Provider()
+			if useMockClient {
+				p.ConfigureContextFunc = func(ctx context.Context, d *schema.ResourceData) (interface{}, error) {
+					return testutil.NewMockClient(), nil
+				}
+			}
+			return p, nil
 		},
 	}
 }
@@ -36,12 +47,18 @@ func TestProvider_impl(t *testing.T) {
 }
 
 func testAccPreCheck(t *testing.T) {
-	if v := os.Getenv("OPENAI_API_KEY"); v == "" {
-		t.Fatal("OPENAI_API_KEY must be set for acceptance tests")
+	if !useMockClient {
+		if v := os.Getenv("OPENAI_API_KEY"); v == "" {
+			t.Fatal("OPENAI_API_KEY must be set for acceptance tests when not using mock client")
+		}
 	}
 }
 
 func TestProvider_configure(t *testing.T) {
+	// Use mock client to avoid real API calls in provider configuration tests
+	useMockClient = true
+	defer func() { useMockClient = os.Getenv("OPENAI_USE_MOCK") != "" }()
+
 	cases := map[string]struct {
 		P      *schema.Provider
 		Config map[string]interface{}
@@ -82,37 +99,11 @@ func TestProvider_configure(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			configFn, diags := tc.P.ConfigureContextFunc(context.Background(), &schema.ResourceData{})
-			if diags.HasError() && !tc.Err {
-				t.Fatalf("unexpected error: %v", diags)
-			}
-			if tc.Err {
-				if !diags.HasError() {
-					t.Fatalf("expected error")
-				}
-				return
-			}
+			d := schema.TestResourceDataRaw(t, tc.P.Schema, tc.Config)
+			_, diags := tc.P.ConfigureContextFunc(context.Background(), d)
 
-			d := &schema.ResourceData{}
-			for k, v := range tc.Config {
-				if err := d.Set(k, v); err != nil {
-					t.Fatalf("err: %s", err)
-				}
-			}
-
-			// Call the configuration function directly
-			configFunc := configFn.(func(context.Context, *schema.ResourceData) (interface{}, diag.Diagnostics))
-			_, diags = configFunc(context.Background(), d)
-
-			if tc.Err {
-				if !diags.HasError() {
-					t.Fatalf("expected error")
-				}
-				return
-			}
-
-			if diags.HasError() {
-				t.Fatalf("unexpected error: %v", diags)
+			if diags.HasError() != tc.Err {
+				t.Fatalf("expected error: %t, got error: %t - errors: %v", tc.Err, diags.HasError(), diags)
 			}
 		})
 	}

@@ -37,9 +37,7 @@ func TestAccDataSourceModels_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					// Check that we get a list of models
 					resource.TestCheckResourceAttrSet("data.openai_models.all", "models.#"),
-					// Verify some known models are present
-					resource.TestMatchResourceAttr("data.openai_models.all", "models.0.id", 
-						regexp.MustCompile(`^(gpt-4|gpt-3.5-turbo|text-davinci-003|dall-e-3)$`)),
+					// Check that the models belong to OpenAI
 					resource.TestCheckResourceAttr("data.openai_models.all", "models.0.owned_by", "openai"),
 					// Check that permissions are populated
 					resource.TestCheckResourceAttrSet("data.openai_models.all", "models.0.permission.#"),

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/HappyPathway/terraform-provider-openai/openai/testutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -65,27 +66,23 @@ func resourceOpenAISpeech() *schema.Resource {
 }
 
 func resourceOpenAISpeechCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+	client := m.(testutil.ClientInterface)
 
-	input := d.Get("input").(string)
-	model := d.Get("model").(string)
-	voice := d.Get("voice").(string)
-	responseFormat := d.Get("response_format").(string)
-	speed := d.Get("speed").(float64)
+	req := &testutil.CreateSpeechRequest{
+		Input:          d.Get("input").(string),
+		Model:          d.Get("model").(string),
+		Voice:          d.Get("voice").(string),
+		ResponseFormat: d.Get("response_format").(string),
+		Speed:          d.Get("speed").(float64),
+	}
 
-	resp, err := client.CreateSpeech(ctx, &CreateSpeechRequest{
-		Input:          input,
-		Model:          model,
-		Voice:          voice,
-		ResponseFormat: responseFormat,
-		Speed:          speed,
-	})
+	resp, err := client.CreateSpeech(ctx, req)
 	if err != nil {
 		return diag.FromErr(fmt.Errorf("error creating speech: %v", err))
 	}
 
 	// Set ID to a combination of input and model
-	d.SetId(fmt.Sprintf("%s-%s", input, model))
+	d.SetId(fmt.Sprintf("%s-%s", req.Input, req.Model))
 
 	// Set the audio content
 	d.Set("audio_content", resp)

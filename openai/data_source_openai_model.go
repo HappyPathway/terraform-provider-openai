@@ -3,6 +3,7 @@ package openai
 import (
 	"context"
 
+	"github.com/HappyPathway/terraform-provider-openai/openai/testutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -14,12 +15,12 @@ func dataSourceOpenAIModel() *schema.Resource {
 			"model_id": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The ID of the model to retrieve",
+				Description: "The ID of the OpenAI model to retrieve",
 			},
 			"owned_by": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Organization that owns the model",
+				Description: "The organization that owns the model",
 			},
 			"permission": {
 				Type:     schema.TypeList,
@@ -58,16 +59,21 @@ func dataSourceOpenAIModel() *schema.Resource {
 }
 
 func dataSourceOpenAIModelRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+	client := m.(testutil.ClientInterface)
 
 	modelID := d.Get("model_id").(string)
 	model, err := client.GetModel(ctx, modelID)
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	if model == nil {
+		return diag.Errorf("Model %s not found", modelID)
+	}
 
 	d.SetId(model.ID)
-	d.Set("owned_by", model.OwnedBy)
+	if err := d.Set("owned_by", model.OwnedBy); err != nil {
+		return diag.FromErr(err)
+	}
 
 	permissions := make([]interface{}, len(model.Permission))
 	for i, p := range model.Permission {
@@ -80,7 +86,9 @@ func dataSourceOpenAIModelRead(ctx context.Context, d *schema.ResourceData, m in
 		permission["allow_fine_tuning"] = p.AllowFineTuning
 		permissions[i] = permission
 	}
-	d.Set("permission", permissions)
+	if err := d.Set("permission", permissions); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }

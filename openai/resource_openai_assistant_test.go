@@ -153,68 +153,68 @@ func TestAccResourceAssistant_withAllTools(t *testing.T) {
 }
 
 func TestAccResourceAssistant_invalidModel(t *testing.T) {
-    resource.Test(t, resource.TestCase{
-        PreCheck:          func() { testAccPreCheck(t) },
-        ProviderFactories: providerFactories,
-        Steps: []resource.TestStep{
-            {
-                Config:      testAccResourceAssistantConfig_invalidModel(),
-                ExpectError: regexp.MustCompile(`Invalid model ID`),
-            },
-        },
-    })
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccResourceAssistantConfig_invalidModel(),
+				ExpectError: regexp.MustCompile(`Invalid model ID`),
+			},
+		},
+	})
 }
 
 func TestAccResourceAssistant_invalidToolType(t *testing.T) {
-    resource.Test(t, resource.TestCase{
-        PreCheck:          func() { testAccPreCheck(t) },
-        ProviderFactories: providerFactories,
-        Steps: []resource.TestStep{
-            {
-                Config:      testAccResourceAssistantConfig_invalidToolType(),
-                ExpectError: regexp.MustCompile(`Invalid tool type`),
-            },
-        },
-    })
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccResourceAssistantConfig_invalidToolType(),
+				ExpectError: regexp.MustCompile(`Invalid tool type`),
+			},
+		},
+	})
 }
 
 func TestAccResourceAssistant_invalidFile(t *testing.T) {
-    resource.Test(t, resource.TestCase{
-        PreCheck:          func() { testAccPreCheck(t) },
-        ProviderFactories: providerFactories,
-        Steps: []resource.TestStep{
-            {
-                Config:      testAccResourceAssistantConfig_invalidFile(),
-                ExpectError: regexp.MustCompile(`Invalid file purpose`),
-            },
-        },
-    })
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccResourceAssistantConfig_invalidFile(),
+				ExpectError: regexp.MustCompile(`Invalid file purpose`),
+			},
+		},
+	})
 }
 
 func TestAccResourceAssistant_invalidFunction(t *testing.T) {
-    resource.Test(t, resource.TestCase{
-        PreCheck:          func() { testAccPreCheck(t) },
-        ProviderFactories: providerFactories,
-        Steps: []resource.TestStep{
-            {
-                Config:      testAccResourceAssistantConfig_invalidFunction(),
-                ExpectError: regexp.MustCompile(`Invalid function parameters`),
-            },
-        },
-    })
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccResourceAssistantConfig_invalidFunction(),
+				ExpectError: regexp.MustCompile(`Invalid function parameters`),
+			},
+		},
+	})
 }
 
 func TestAccResourceAssistant_tooManyTools(t *testing.T) {
-    resource.Test(t, resource.TestCase{
-        PreCheck:          func() { testAccPreCheck(t) },
-        ProviderFactories: providerFactories,
-        Steps: []resource.TestStep{
-            {
-                Config:      testAccResourceAssistantConfig_tooManyTools(),
-                ExpectError: regexp.MustCompile(`exceeds maximum allowed tools \(128\)`),
-            },
-        },
-    })
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccResourceAssistantConfig_tooManyTools(),
+				ExpectError: regexp.MustCompile(`exceeds maximum allowed tools \(128\)`),
+			},
+		},
+	})
 }
 
 func testAccResourceOpenAIAssistantConfig() string {
@@ -394,7 +394,7 @@ resource "openai_assistant" "test_all_tools" {
 }
 
 func testAccResourceAssistantConfig_invalidModel() string {
-    return fmt.Sprintf(`
+	return fmt.Sprintf(`
 resource "openai_assistant" "test_invalid_model" {
     name  = "Invalid Model Assistant"
     model = "invalid-model-id"
@@ -403,7 +403,7 @@ resource "openai_assistant" "test_invalid_model" {
 }
 
 func testAccResourceAssistantConfig_invalidToolType() string {
-    return fmt.Sprintf(`
+	return fmt.Sprintf(`
 resource "openai_assistant" "test_invalid_tool" {
     name  = "Invalid Tool Assistant"
     model = "gpt-4"
@@ -417,7 +417,7 @@ resource "openai_assistant" "test_invalid_tool" {
 }
 
 func testAccResourceAssistantConfig_invalidFile() string {
-    return fmt.Sprintf(`
+	return fmt.Sprintf(`
 resource "openai_file" "invalid_purpose" {
     content  = "Test content"
     filename = "test.txt"
@@ -438,7 +438,7 @@ resource "openai_assistant" "test_invalid_file" {
 }
 
 func testAccResourceAssistantConfig_invalidFunction() string {
-    return fmt.Sprintf(`
+	return fmt.Sprintf(`
 resource "openai_assistant" "test_invalid_function" {
     name  = "Invalid Function Assistant"
     model = "gpt-4"
@@ -464,10 +464,10 @@ resource "openai_assistant" "test_invalid_function" {
 }
 
 func testAccResourceAssistantConfig_tooManyTools() string {
-    // Generate 129 tools (exceeding the 128 limit)
-    var tools strings.Builder
-    for i := 0; i < 129; i++ {
-        tools.WriteString(`
+	// Generate 129 tools (exceeding the 128 limit)
+	var tools strings.Builder
+	for i := 0; i < 129; i++ {
+		tools.WriteString(`
         {
             type = "function"
             function = {
@@ -484,9 +484,9 @@ func testAccResourceAssistantConfig_tooManyTools() string {
                 })
             }
         },`)
-    }
+	}
 
-    return fmt.Sprintf(`
+	return fmt.Sprintf(`
 resource "openai_assistant" "test_too_many_tools" {
     name  = "Too Many Tools Assistant"
     model = "gpt-4"

@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"github.com/HappyPathway/terraform-provider-openai/openai/testutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -68,21 +69,21 @@ func resourceOpenAITranscription() *schema.Resource {
 }
 
 func resourceOpenAITranscriptionCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+	client := m.(testutil.ClientInterface)
 
-	audioContent := d.Get("audio_content").(string)
-	audioBytes, err := base64.StdEncoding.DecodeString(audioContent)
+	fileContent := d.Get("file_content").(string)
+	fileBytes, err := base64.StdEncoding.DecodeString(fileContent)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("error decoding audio content: %v", err))
+		return diag.FromErr(fmt.Errorf("error decoding file content: %v", err))
 	}
 
-	req := &TranscriptionRequest{
-		File:           audioBytes,
+	req := &testutil.TranscriptionRequest{
+		File:           fileBytes,
 		Model:          d.Get("model").(string),
 		Language:       d.Get("language").(string),
 		Prompt:         d.Get("prompt").(string),
 		ResponseFormat: d.Get("response_format").(string),
-		Temperature:    d.Get("temperature").(float64),
+		Temperature:    float32(d.Get("temperature").(float64)),
 	}
 
 	resp, err := client.CreateTranscription(ctx, req)
@@ -91,7 +92,7 @@ func resourceOpenAITranscriptionCreate(ctx context.Context, d *schema.ResourceDa
 	}
 
 	// Set ID to a hash of the audio content
-	d.SetId(fmt.Sprintf("%x", audioBytes[:16]))
+	d.SetId(fmt.Sprintf("%x", fileBytes[:16]))
 
 	// Set the transcribed text
 	d.Set("text", resp.Text)

@@ -76,7 +76,7 @@ data "openai_model" "test" {
 func testAccDataSourceModelConfig_basic() string {
 	return fmt.Sprintf(`
 data "openai_model" "gpt4" {
-  model = "gpt-4"
+  model_id = "gpt-4"
 }
 `)
 }
@@ -84,7 +84,7 @@ data "openai_model" "gpt4" {
 func testAccDataSourceModelConfig_nonexistent() string {
 	return fmt.Sprintf(`
 data "openai_model" "nonexistent" {
-  model = "nonexistent-model"
+  model_id = "nonexistent-model"
 }
 `)
 }

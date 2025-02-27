@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/HappyPathway/terraform-provider-openai/openai/testutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -79,9 +80,9 @@ func resourceOpenAIEmbedding() *schema.Resource {
 }
 
 func resourceOpenAIEmbeddingCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+	client := m.(testutil.ClientInterface)
 
-	req := &CreateEmbeddingRequest{
+	req := &testutil.CreateEmbeddingRequest{
 		Model: d.Get("model").(string),
 		Input: d.Get("input").(string),
 	}

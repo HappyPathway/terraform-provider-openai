@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/HappyPathway/terraform-provider-openai/openai/testutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -135,9 +136,9 @@ func resourceOpenAICompletion() *schema.Resource {
 }
 
 func resourceOpenAICompletionCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+	client := m.(testutil.ClientInterface)
 
-	req := &CreateCompletionRequest{
+	req := &testutil.CreateCompletionRequest{
 		Model:  d.Get("model").(string),
 		Prompt: d.Get("prompt").(string),
 	}
@@ -167,7 +168,7 @@ func resourceOpenAICompletionCreate(ctx context.Context, d *schema.ResourceData,
 		req.Suffix = v.(string)
 	}
 	if v, ok := d.GetOk("temperature"); ok {
-		req.Temperature = v.(float64)
+		req.Temperature = float32(v.(float64))
 	}
 	if v, ok := d.GetOk("top_p"); ok {
 		req.TopP = v.(float64)

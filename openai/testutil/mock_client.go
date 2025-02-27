@@ -3,27 +3,28 @@ package testutil
 import (
 	"context"
 	"fmt"
-
-	"github.com/HappyPathway/terraform-provider-openai/openai"
+	"time"
 )
 
-// MockClient is a mock implementation of the OpenAI client
+// MockClient is a mock implementation of the ClientInterface
 type MockClient struct {
-	Models     map[string]*openai.Model
-	Files      map[string]*openai.File
-	Assistants map[string]*openai.Assistant
-	FineTuning map[string]*openai.FineTuningJob
+	Models          map[string]*Model
+	Files           map[string]*File
+	Assistants      map[string]*Assistant
+	ChatCompletions map[string]*ChatCompletionResponse
+	FineTuning      map[string]*FineTuningJob
+	CompletionCount int
 }
 
 // NewMockClient creates a new mock client with default test data
 func NewMockClient() *MockClient {
 	return &MockClient{
-		Models: map[string]*openai.Model{
+		Models: map[string]*Model{
 			"gpt-3.5-turbo": {
 				ID:      "gpt-3.5-turbo",
 				Object:  "model",
 				OwnedBy: "openai",
-				Permission: []openai.Permission{
+				Permission: []Permission{
 					{
 						ID:                "perm-123",
 						Object:            "permission",
@@ -34,15 +35,31 @@ func NewMockClient() *MockClient {
 					},
 				},
 			},
+			"gpt-4": {
+				ID:      "gpt-4",
+				Object:  "model",
+				OwnedBy: "openai",
+				Permission: []Permission{
+					{
+						ID:                "perm-456",
+						Object:            "permission",
+						Created:           1629298613,
+						AllowCreateEngine: false,
+						AllowSampling:     true,
+						AllowFineTuning:   false,
+					},
+				},
+			},
 		},
-		Files:      make(map[string]*openai.File),
-		Assistants: make(map[string]*openai.Assistant),
-		FineTuning: make(map[string]*openai.FineTuningJob),
+		Files:           make(map[string]*File),
+		Assistants:      make(map[string]*Assistant),
+		ChatCompletions: make(map[string]*ChatCompletionResponse),
+		FineTuning:      make(map[string]*FineTuningJob),
 	}
 }
 
 // GetModel implements the Model retrieval
-func (m *MockClient) GetModel(ctx context.Context, modelID string) (*openai.Model, error) {
+func (m *MockClient) GetModel(ctx context.Context, modelID string) (*Model, error) {
 	if model, ok := m.Models[modelID]; ok {
 		return model, nil
 	}
@@ -50,8 +67,8 @@ func (m *MockClient) GetModel(ctx context.Context, modelID string) (*openai.Mode
 }
 
 // ListModels implements the Models listing
-func (m *MockClient) ListModels(ctx context.Context) ([]openai.Model, error) {
-	models := make([]openai.Model, 0, len(m.Models))
+func (m *MockClient) ListModels(ctx context.Context) ([]Model, error) {
+	models := make([]Model, 0, len(m.Models))
 	for _, model := range m.Models {
 		models = append(models, *model)
 	}
@@ -59,13 +76,13 @@ func (m *MockClient) ListModels(ctx context.Context) ([]openai.Model, error) {
 }
 
 // UploadFile implements file upload
-func (m *MockClient) UploadFile(ctx context.Context, req *openai.FileUploadRequest) (*openai.File, error) {
+func (m *MockClient) UploadFile(ctx context.Context, req *FileUploadRequest) (*File, error) {
 	fileID := fmt.Sprintf("file-%d", len(m.Files)+1)
-	file := &openai.File{
+	file := &File{
 		ID:        fileID,
 		Object:    "file",
 		Bytes:     len(req.File),
-		CreatedAt: 1629298613,
+		CreatedAt: time.Now().Unix(),
 		Filename:  "test.jsonl",
 		Purpose:   req.Purpose,
 	}
@@ -74,7 +91,7 @@ func (m *MockClient) UploadFile(ctx context.Context, req *openai.FileUploadReque
 }
 
 // GetFile implements file retrieval
-func (m *MockClient) GetFile(ctx context.Context, fileID string) (*openai.File, error) {
+func (m *MockClient) GetFile(ctx context.Context, fileID string) (*File, error) {
 	if file, ok := m.Files[fileID]; ok {
 		return file, nil
 	}
@@ -91,12 +108,12 @@ func (m *MockClient) DeleteFile(ctx context.Context, fileID string) error {
 }
 
 // CreateAssistant implements assistant creation
-func (m *MockClient) CreateAssistant(ctx context.Context, req *openai.CreateAssistantRequest) (*openai.Assistant, error) {
+func (m *MockClient) CreateAssistant(ctx context.Context, req *CreateAssistantRequest) (*Assistant, error) {
 	assistantID := fmt.Sprintf("asst-%d", len(m.Assistants)+1)
-	assistant := &openai.Assistant{
+	assistant := &Assistant{
 		ID:           assistantID,
 		Object:       "assistant",
-		CreatedAt:    1629298613,
+		CreatedAt:    time.Now().Unix(),
 		Name:         req.Name,
 		Description:  req.Description,
 		Model:        req.Model,
@@ -110,7 +127,7 @@ func (m *MockClient) CreateAssistant(ctx context.Context, req *openai.CreateAssi
 }
 
 // GetAssistant implements assistant retrieval
-func (m *MockClient) GetAssistant(ctx context.Context, assistantID string) (*openai.Assistant, error) {
+func (m *MockClient) GetAssistant(ctx context.Context, assistantID string) (*Assistant, error) {
 	if assistant, ok := m.Assistants[assistantID]; ok {
 		return assistant, nil
 	}
@@ -118,7 +135,7 @@ func (m *MockClient) GetAssistant(ctx context.Context, assistantID string) (*ope
 }
 
 // UpdateAssistant implements assistant update
-func (m *MockClient) UpdateAssistant(ctx context.Context, assistantID string, req *openai.CreateAssistantRequest) (*openai.Assistant, error) {
+func (m *MockClient) UpdateAssistant(ctx context.Context, assistantID string, req *CreateAssistantRequest) (*Assistant, error) {
 	if assistant, ok := m.Assistants[assistantID]; ok {
 		assistant.Name = req.Name
 		assistant.Description = req.Description
@@ -142,14 +159,14 @@ func (m *MockClient) DeleteAssistant(ctx context.Context, assistantID string) er
 }
 
 // CreateFineTuningJob implements fine-tuning job creation
-func (m *MockClient) CreateFineTuningJob(ctx context.Context, req *openai.CreateFineTuningJobRequest) (*openai.FineTuningJob, error) {
+func (m *MockClient) CreateFineTuningJob(ctx context.Context, req *CreateFineTuningJobRequest) (*FineTuningJob, error) {
 	jobID := fmt.Sprintf("ftjob-%d", len(m.FineTuning)+1)
-	job := &openai.FineTuningJob{
+	job := &FineTuningJob{
 		ID:             jobID,
 		Object:         "fine_tuning.job",
 		Model:          req.Model,
-		CreatedAt:      1629298613,
-		FinishedAt:     0,
+		CreatedAt:      time.Now().Unix(),
+		FinishedAt:     time.Now().Unix(),
 		Status:         "created",
 		TrainingFile:   req.TrainingFile,
 		ValidationFile: req.ValidationFile,
@@ -159,7 +176,7 @@ func (m *MockClient) CreateFineTuningJob(ctx context.Context, req *openai.Create
 }
 
 // GetFineTuningJob implements fine-tuning job retrieval
-func (m *MockClient) GetFineTuningJob(ctx context.Context, jobID string) (*openai.FineTuningJob, error) {
+func (m *MockClient) GetFineTuningJob(ctx context.Context, jobID string) (*FineTuningJob, error) {
 	if job, ok := m.FineTuning[jobID]; ok {
 		return job, nil
 	}
@@ -167,30 +184,30 @@ func (m *MockClient) GetFineTuningJob(ctx context.Context, jobID string) (*opena
 }
 
 // CancelFineTuningJob implements fine-tuning job cancellation
-func (m *MockClient) CancelFineTuningJob(ctx context.Context, jobID string) (*openai.FineTuningJob, error) {
+func (m *MockClient) CancelFineTuningJob(ctx context.Context, jobID string) (*FineTuningJob, error) {
 	if job, ok := m.FineTuning[jobID]; ok {
 		job.Status = "cancelled"
-		job.FinishedAt = 1629298614
+		job.FinishedAt = time.Now().Unix()
 		return job, nil
 	}
 	return nil, fmt.Errorf("fine-tuning job %s not found", jobID)
 }
 
 // CreateCompletion implements completion creation
-func (m *MockClient) CreateCompletion(ctx context.Context, req *openai.CreateCompletionRequest) (*openai.Completion, error) {
-	return &openai.Completion{
+func (m *MockClient) CreateCompletion(ctx context.Context, req *CreateCompletionRequest) (*Completion, error) {
+	return &Completion{
 		ID:      "cmpl-123",
 		Object:  "completion",
-		Created: 1629298613,
+		Created: time.Now().Unix(),
 		Model:   req.Model,
-		Choices: []openai.CompletionChoice{
+		Choices: []CompletionChoice{
 			{
 				Text:         "This is a test completion",
 				Index:        0,
 				FinishReason: "stop",
 			},
 		},
-		Usage: openai.Usage{
+		Usage: Usage{
 			PromptTokens:     10,
 			CompletionTokens: 20,
 			TotalTokens:      30,
@@ -199,10 +216,10 @@ func (m *MockClient) CreateCompletion(ctx context.Context, req *openai.CreateCom
 }
 
 // CreateEmbedding implements embedding creation
-func (m *MockClient) CreateEmbedding(ctx context.Context, req *openai.CreateEmbeddingRequest) (*openai.Embedding, error) {
-	return &openai.Embedding{
+func (m *MockClient) CreateEmbedding(ctx context.Context, req *CreateEmbeddingRequest) (*Embedding, error) {
+	return &Embedding{
 		Object: "embedding",
-		Data: []openai.EmbeddingData{
+		Data: []EmbeddingData{
 			{
 				Object:    "embedding",
 				Embedding: []float64{0.1, 0.2, 0.3},
@@ -210,7 +227,7 @@ func (m *MockClient) CreateEmbedding(ctx context.Context, req *openai.CreateEmbe
 			},
 		},
 		Model: req.Model,
-		Usage: openai.EmbeddingUsage{
+		Usage: EmbeddingUsage{
 			PromptTokens: 10,
 			TotalTokens:  10,
 		},
@@ -218,10 +235,10 @@ func (m *MockClient) CreateEmbedding(ctx context.Context, req *openai.CreateEmbe
 }
 
 // CreateImage implements image generation
-func (m *MockClient) CreateImage(ctx context.Context, req *openai.CreateImageRequest) (*openai.ImageResponse, error) {
-	return &openai.ImageResponse{
-		Created: 1629298613,
-		Data: []openai.ImageData{
+func (m *MockClient) CreateImage(ctx context.Context, req *CreateImageRequest) (*ImageResponse, error) {
+	return &ImageResponse{
+		Created: time.Now().Unix(),
+		Data: []ImageData{
 			{
 				URL:           "https://example.com/image.png",
 				B64JSON:       "",
@@ -232,35 +249,73 @@ func (m *MockClient) CreateImage(ctx context.Context, req *openai.CreateImageReq
 }
 
 // CreateModeration implements content moderation
-func (m *MockClient) CreateModeration(ctx context.Context, req *openai.CreateModerationRequest) (*openai.ModerationResponse, error) {
-	return &openai.ModerationResponse{
+func (m *MockClient) CreateModeration(ctx context.Context, req *CreateModerationRequest) (*ModerationResponse, error) {
+	return &ModerationResponse{
 		ID:    "modr-123",
 		Model: req.Model,
-		Results: []openai.ModerationResult{
+		Results: []ModerationResult{
 			{
 				Flagged:        false,
-				Categories:     openai.ModerationCategories{},
-				CategoryScores: openai.ModerationCategoryScores{},
+				Categories:     ModerationCategories{},
+				CategoryScores: ModerationCategoryScores{},
 			},
 		},
 	}, nil
 }
 
 // CreateSpeech implements text-to-speech
-func (m *MockClient) CreateSpeech(ctx context.Context, req *openai.CreateSpeechRequest) (string, error) {
+func (m *MockClient) CreateSpeech(ctx context.Context, req *CreateSpeechRequest) (string, error) {
 	return "base64-encoded-audio-data", nil
 }
 
 // CreateTranscription implements audio transcription
-func (m *MockClient) CreateTranscription(ctx context.Context, req *openai.TranscriptionRequest) (*openai.TranscriptionResponse, error) {
-	return &openai.TranscriptionResponse{
+func (m *MockClient) CreateTranscription(ctx context.Context, req *TranscriptionRequest) (*TranscriptionResponse, error) {
+	return &TranscriptionResponse{
 		Text: "This is a test transcription",
 	}, nil
 }
 
 // CreateTranslation implements audio translation
-func (m *MockClient) CreateTranslation(ctx context.Context, req *openai.TranslationRequest) (*openai.TranslationResponse, error) {
-	return &openai.TranslationResponse{
+func (m *MockClient) CreateTranslation(ctx context.Context, req *TranslationRequest) (*TranslationResponse, error) {
+	return &TranslationResponse{
 		Text: "This is a test translation",
 	}, nil
+}
+
+// CreateChatCompletion implements chat completion
+func (m *MockClient) CreateChatCompletion(ctx context.Context, req *CreateChatCompletionRequest) (*ChatCompletionResponse, error) {
+	if req.Model == "invalid-model" {
+		return nil, fmt.Errorf("invalid model specified")
+	}
+
+	m.CompletionCount++
+	id := fmt.Sprintf("chatcmpl-%d", m.CompletionCount)
+
+	resp := &ChatCompletionResponse{
+		ID:      id,
+		Object:  "chat.completion",
+		Created: time.Now().Unix(),
+		Model:   req.Model,
+		Choices: []ChatCompletionChoice{
+			{
+				Message: ChatCompletionMessage{
+					Role:    "assistant",
+					Content: "This is a mock response for testing purposes.",
+				},
+				FinishReason: "stop",
+			},
+		},
+		Usage: Usage{
+			PromptTokens:     100,
+			CompletionTokens: 50,
+			TotalTokens:      150,
+		},
+	}
+
+	if req.ResponseFormat != nil && req.ResponseFormat["type"] == "json_object" {
+		resp.Choices[0].Message.Content = `{"title":"The Hobbit","author":"J.R.R. Tolkien","year_published":1937,"genre":["fantasy","children","adventure"]}`
+	}
+
+	m.ChatCompletions[id] = resp
+	return resp, nil
 }

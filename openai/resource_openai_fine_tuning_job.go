@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/HappyPathway/terraform-provider-openai/openai/testutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -87,9 +88,9 @@ func resourceOpenAIFineTuningJob() *schema.Resource {
 }
 
 func resourceOpenAIFineTuningJobCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+	client := m.(testutil.ClientInterface)
 
-	req := &CreateFineTuningJobRequest{
+	req := &testutil.CreateFineTuningJobRequest{
 		Model:          d.Get("model").(string),
 		TrainingFile:   d.Get("training_file").(string),
 		ValidationFile: d.Get("validation_file").(string),
