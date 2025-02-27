@@ -96,9 +96,9 @@ type AssistantTool struct {
 
 // FunctionDefinition represents the definition of a function tool
 type FunctionDefinition struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Parameters  string `json:"parameters"`
+	Name        string                 `json:"name"`
+	Description string                 `json:"description"`
+	Parameters  map[string]interface{} `json:"parameters"`
 }
 
 // CreateAssistantRequest represents the parameters for creating an assistant

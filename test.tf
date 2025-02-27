@@ -43,35 +43,33 @@ resource "openai_assistant" "test" {
   }
 
   tools {
-    type = "retrieval"
+    type = "file_search"
   }
 
   tools {
-    type = "function"
-    function {
-      name        = "process_data"
-      description = "Process and analyze dataset with custom parameters"
-      parameters  = jsonencode({
-        type = "object"
-        properties = {
-          dataset_name = {
-            type        = "string"
-            description = "Name of the dataset to analyze"
-          }
-          analysis_type = {
-            type        = "string"
-            enum        = ["statistical", "temporal", "categorical"]
-            description = "Type of analysis to perform"
-          }
-          output_format = {
-            type        = "string"
-            enum        = ["json", "csv", "text"]
-            description = "Desired output format"
-          }
+    type        = "function"
+    name        = "process_data"
+    description = "Process and analyze dataset with custom parameters"
+    parameters  = jsonencode({
+      type = "object"
+      properties = {
+        dataset_name = {
+          type        = "string"
+          description = "Name of the dataset to analyze"
         }
-        required = ["dataset_name", "analysis_type"]
-      })
-    }
+        analysis_type = {
+          type        = "string"
+          enum        = ["statistical", "temporal", "categorical"]
+          description = "Type of analysis to perform"
+        }
+        output_format = {
+          type        = "string"
+          enum        = ["json", "csv", "text"]
+          description = "Desired output format"
+        }
+      }
+      required = ["dataset_name", "analysis_type"]
+    })
   }
 
   file_ids = [openai_file.test_file.id]

@@ -2,6 +2,7 @@ package openai
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -100,18 +101,23 @@ func resourceOpenAIAssistantCreate(ctx context.Context, d *schema.ResourceData, 
 
 	if v, ok := d.GetOk("tools"); ok {
 		tools := make([]AssistantTool, len(v.([]interface{})))
-		for i, tool := range v.([]interface{}) {
+		toolsList := v.([]interface{})
+		for i, tool := range toolsList {
 			toolMap := tool.(map[string]interface{})
 			tools[i] = AssistantTool{
 				Type: toolMap["type"].(string),
 			}
 
-			// Handle function configuration if this is a function tool
 			if tools[i].Type == "function" {
+				var params map[string]interface{}
+				if err := json.Unmarshal([]byte(toolMap["parameters"].(string)), &params); err != nil {
+					return diag.FromErr(err)
+				}
+
 				tools[i].Function = &FunctionDefinition{
 					Name:        toolMap["name"].(string),
 					Description: toolMap["description"].(string),
-					Parameters:  toolMap["parameters"].(string),
+					Parameters:  params,
 				}
 			}
 		}
@@ -119,8 +125,9 @@ func resourceOpenAIAssistantCreate(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	if v, ok := d.GetOk("file_ids"); ok {
-		fileIDs := make([]string, len(v.([]interface{})))
-		for i, id := range v.([]interface{}) {
+		fileIDsRaw := v.([]interface{})
+		fileIDs := make([]string, len(fileIDsRaw))
+		for i, id := range fileIDsRaw {
 			fileIDs[i] = id.(string)
 		}
 		req.FileIDs = fileIDs
@@ -128,7 +135,8 @@ func resourceOpenAIAssistantCreate(ctx context.Context, d *schema.ResourceData, 
 
 	if v, ok := d.GetOk("metadata"); ok {
 		metadata := make(map[string]string)
-		for key, value := range v.(map[string]interface{}) {
+		metaMap := v.(map[string]interface{})
+		for key, value := range metaMap {
 			metadata[key] = value.(string)
 		}
 		req.Metadata = metadata
@@ -192,18 +200,23 @@ func resourceOpenAIAssistantUpdate(ctx context.Context, d *schema.ResourceData, 
 
 	if v, ok := d.GetOk("tools"); ok {
 		tools := make([]AssistantTool, len(v.([]interface{})))
-		for i, tool := range v.([]interface{}) {
+		toolsList := v.([]interface{})
+		for i, tool := range toolsList {
 			toolMap := tool.(map[string]interface{})
 			tools[i] = AssistantTool{
 				Type: toolMap["type"].(string),
 			}
 
-			// Handle function configuration if this is a function tool
 			if tools[i].Type == "function" {
+				var params map[string]interface{}
+				if err := json.Unmarshal([]byte(toolMap["parameters"].(string)), &params); err != nil {
+					return diag.FromErr(err)
+				}
+
 				tools[i].Function = &FunctionDefinition{
 					Name:        toolMap["name"].(string),
 					Description: toolMap["description"].(string),
-					Parameters:  toolMap["parameters"].(string),
+					Parameters:  params,
 				}
 			}
 		}
@@ -211,8 +224,9 @@ func resourceOpenAIAssistantUpdate(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	if v, ok := d.GetOk("file_ids"); ok {
-		fileIDs := make([]string, len(v.([]interface{})))
-		for i, id := range v.([]interface{}) {
+		fileIDsRaw := v.([]interface{})
+		fileIDs := make([]string, len(fileIDsRaw))
+		for i, id := range fileIDsRaw {
 			fileIDs[i] = id.(string)
 		}
 		req.FileIDs = fileIDs
@@ -220,7 +234,8 @@ func resourceOpenAIAssistantUpdate(ctx context.Context, d *schema.ResourceData, 
 
 	if v, ok := d.GetOk("metadata"); ok {
 		metadata := make(map[string]string)
-		for key, value := range v.(map[string]interface{}) {
+		metaMap := v.(map[string]interface{})
+		for key, value := range metaMap {
 			metadata[key] = value.(string)
 		}
 		req.Metadata = metadata
