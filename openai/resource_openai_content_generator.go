@@ -2,6 +2,8 @@ package openai
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -66,11 +68,12 @@ func ResourceOpenAIContentGenerator() *schema.Resource {
 				},
 			},
 			"temperature": {
-				Type:        schema.TypeFloat,
-				Optional:    true,
-				Default:     1.0,
-				ForceNew:    true,
-				Description: "Sampling temperature between 0 and 2",
+				Type:         schema.TypeFloat,
+				Optional:     true,
+				Default:      1.0,
+				ForceNew:     true,
+				ValidateFunc: validation.FloatBetween(0.0, 2.0),
+				Description:  "Sampling temperature between 0 and 2",
 			},
 			// Computed values
 			"content": {
@@ -95,10 +98,28 @@ func ResourceOpenAIContentGenerator() *schema.Resource {
 	}
 }
 
+// generateResourceID creates a deterministic ID for the resource based on its inputs
+func generateResourceID(model string, messages []ChatCompletionMessage, temperature float32) string {
+	data := struct {
+		Model       string
+		Messages    []ChatCompletionMessage
+		Temperature float32
+	}{
+		Model:       model,
+		Messages:    messages,
+		Temperature: temperature,
+	}
+
+	jsonData, _ := json.Marshal(data)
+	hash := sha256.Sum256(jsonData)
+	return hex.EncodeToString(hash[:])
+}
+
 // ResourceOpenAIContentGeneratorCreate creates a new content generation
 func ResourceOpenAIContentGeneratorCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*Client)
 	messages := make([]ChatCompletionMessage, 0)
+
 	for _, msg := range d.Get("messages").([]interface{}) {
 		msgMap := msg.(map[string]interface{})
 		messages = append(messages, ChatCompletionMessage{
@@ -121,12 +142,9 @@ func ResourceOpenAIContentGeneratorCreate(ctx context.Context, d *schema.Resourc
 		formats := v.([]interface{})
 		if len(formats) > 0 {
 			format := formats[0].(map[string]interface{})
-			responseFormat := make(map[string]string)
-			responseFormat["type"] = format["type"].(string)
-			if schema, ok := format["schema"]; ok && schema.(string) != "" {
-				responseFormat["schema"] = schema.(string)
+			req.ResponseFormat = &ResponseFormat{
+				Type: format["type"].(string),
 			}
-			req.ResponseFormat = responseFormat
 		}
 	}
 
@@ -135,25 +153,33 @@ func ResourceOpenAIContentGeneratorCreate(ctx context.Context, d *schema.Resourc
 		return diag.FromErr(fmt.Errorf("error creating chat completion: %v", err))
 	}
 
-	// Set ID to a hash of the inputs
-	d.SetId(fmt.Sprintf("%s-%s", req.Model, messages[0].Content))
+	// Generate deterministic ID based on inputs
+	d.SetId(generateResourceID(req.Model, messages, req.Temperature))
 
 	if len(completion.Choices) > 0 {
-		d.Set("content", completion.Choices[0].Message.Content)
+		if err := d.Set("content", completion.Choices[0].Message.Content); err != nil {
+			return diag.FromErr(fmt.Errorf("error setting content: %v", err))
+		}
 	}
 
 	rawResponse, err := json.Marshal(completion)
 	if err != nil {
 		return diag.FromErr(fmt.Errorf("error marshaling response: %v", err))
 	}
-	d.Set("raw_response", string(rawResponse))
+
+	if err := d.Set("raw_response", string(rawResponse)); err != nil {
+		return diag.FromErr(fmt.Errorf("error setting raw_response: %v", err))
+	}
 
 	usage := map[string]interface{}{
 		"completion_tokens": completion.Usage.CompletionTokens,
 		"prompt_tokens":     completion.Usage.PromptTokens,
 		"total_tokens":      completion.Usage.TotalTokens,
 	}
-	d.Set("usage", usage)
+
+	if err := d.Set("usage", usage); err != nil {
+		return diag.FromErr(fmt.Errorf("error setting usage: %v", err))
+	}
 
 	return nil
 }
@@ -161,11 +187,13 @@ func ResourceOpenAIContentGeneratorCreate(ctx context.Context, d *schema.Resourc
 // ResourceOpenAIContentGeneratorRead reads the content generation state
 func ResourceOpenAIContentGeneratorRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	// Content generations are stateless and can't be retrieved after creation
+	// All necessary state is stored in the resource data
 	return nil
 }
 
 // ResourceOpenAIContentGeneratorDelete deletes the content generation state
 func ResourceOpenAIContentGeneratorDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	// Content generations are stateless and don't need explicit deletion
+	d.SetId("")
 	return nil
 }

@@ -2,6 +2,7 @@ package openai
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -13,7 +14,7 @@ func Provider() *schema.Provider {
 		Schema: map[string]*schema.Schema{
 			"api_key": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true, // Changed from Required to Optional
 				Sensitive:   true,
 				Description: "OpenAI API Key",
 			},
@@ -56,8 +57,20 @@ func Provider() *schema.Provider {
 }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
+	apiKey := d.Get("api_key").(string)
+
+	// If api_key is not set in provider config, check environment variable
+	if apiKey == "" {
+		apiKey = os.Getenv("OPENAI_API_KEY")
+	}
+
+	// If still no API key, return error
+	if apiKey == "" {
+		return nil, diag.Errorf("api_key must be provided via configuration or OPENAI_API_KEY environment variable")
+	}
+
 	config := ClientConfig{
-		APIKey:     d.Get("api_key").(string),
+		APIKey:     apiKey,
 		RetryMax:   d.Get("retry_max").(int),
 		RetryDelay: time.Duration(d.Get("retry_delay").(int)) * time.Second,
 		Timeout:    time.Duration(d.Get("timeout").(int)) * time.Second,

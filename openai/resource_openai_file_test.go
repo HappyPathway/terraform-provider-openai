@@ -12,8 +12,14 @@ func TestAccResourceOpenAIFile_basic(t *testing.T) {
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	testDataPath := "testdata/test.jsonl"
 
+	// Create test data directory if it doesn't exist
+	err := os.MkdirAll("testdata", 0755)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Create test file
-	err := os.WriteFile(testDataPath, []byte("{\"prompt\": \"test\", \"completion\": \"test completion\"}\n"), 0644)
+	err = os.WriteFile(testDataPath, []byte("{\"prompt\": \"test\", \"completion\": \"test completion\"}\n"), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}

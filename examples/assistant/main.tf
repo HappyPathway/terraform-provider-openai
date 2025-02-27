@@ -13,8 +13,7 @@ provider "openai" {
 }
 
 resource "openai_file" "knowledge_base" {
-  content  = filebase64("${path.module}/knowledge_base.txt")
-  filename = "knowledge_base.txt"
+  file     = "${path.module}/knowledge_base.txt"
   purpose  = "assistants"
 }
 
@@ -29,26 +28,23 @@ resource "openai_assistant" "research_assistant" {
   }
 
   tools {
-    type = "function"
-    
-    function {
-      name = "search_papers"
-      description = "Search for relevant research papers in the database"
-      parameters = jsonencode({
-        type = "object"
-        properties = {
-          query = {
-            type = "string"
-            description = "The search query"
-          }
-          year = {
-            type = "integer"
-            description = "Optional: Filter by publication year"
-          }
+    type        = "function"
+    name        = "search_papers"
+    description = "Search for relevant research papers in the database"
+    parameters  = jsonencode({
+      type = "object"
+      properties = {
+        query = {
+          type        = "string"
+          description = "The search query"
         }
-        required = ["query"]
-      })
-    }
+        year = {
+          type        = "integer"
+          description = "Optional: Filter by publication year"
+        }
+      }
+      required = ["query"]
+    })
   }
 
   file_ids = [openai_file.knowledge_base.id]

@@ -35,14 +35,29 @@ func resourceOpenAIAssistant() *schema.Resource {
 				Description: "System instructions that the assistant uses",
 			},
 			"tools": {
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"type": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Description: "The type of tool",
+							Description: "The type of tool (code_interpreter, retrieval, or function)",
+						},
+						"name": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The name of the function (required when type is function)",
+						},
+						"description": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "A description of what the function does (required when type is function)",
+						},
+						"parameters": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The parameters the function accepts in JSON schema format (required when type is function)",
 						},
 					},
 					Description: "The tools that the assistant can use",
@@ -84,11 +99,20 @@ func resourceOpenAIAssistantCreate(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	if v, ok := d.GetOk("tools"); ok {
-		tools := make([]AssistantTool, len(v.(*schema.Set).List()))
-		for i, tool := range v.(*schema.Set).List() {
+		tools := make([]AssistantTool, len(v.([]interface{})))
+		for i, tool := range v.([]interface{}) {
 			toolMap := tool.(map[string]interface{})
 			tools[i] = AssistantTool{
 				Type: toolMap["type"].(string),
+			}
+
+			// Handle function configuration if this is a function tool
+			if tools[i].Type == "function" {
+				tools[i].Function = &FunctionDefinition{
+					Name:        toolMap["name"].(string),
+					Description: toolMap["description"].(string),
+					Parameters:  toolMap["parameters"].(string),
+				}
 			}
 		}
 		req.Tools = tools
@@ -136,9 +160,17 @@ func resourceOpenAIAssistantRead(ctx context.Context, d *schema.ResourceData, m 
 
 	tools := make([]interface{}, len(assistant.Tools))
 	for i, tool := range assistant.Tools {
-		tools[i] = map[string]interface{}{
+		toolMap := map[string]interface{}{
 			"type": tool.Type,
 		}
+
+		// Handle function configuration in the response
+		if tool.Type == "function" && tool.Function != nil {
+			toolMap["name"] = tool.Function.Name
+			toolMap["description"] = tool.Function.Description
+			toolMap["parameters"] = tool.Function.Parameters
+		}
+		tools[i] = toolMap
 	}
 	d.Set("tools", tools)
 
@@ -159,11 +191,20 @@ func resourceOpenAIAssistantUpdate(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	if v, ok := d.GetOk("tools"); ok {
-		tools := make([]AssistantTool, len(v.(*schema.Set).List()))
-		for i, tool := range v.(*schema.Set).List() {
+		tools := make([]AssistantTool, len(v.([]interface{})))
+		for i, tool := range v.([]interface{}) {
 			toolMap := tool.(map[string]interface{})
 			tools[i] = AssistantTool{
 				Type: toolMap["type"].(string),
+			}
+
+			// Handle function configuration if this is a function tool
+			if tools[i].Type == "function" {
+				tools[i].Function = &FunctionDefinition{
+					Name:        toolMap["name"].(string),
+					Description: toolMap["description"].(string),
+					Parameters:  toolMap["parameters"].(string),
+				}
 			}
 		}
 		req.Tools = tools

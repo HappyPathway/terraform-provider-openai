@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../docs/terraform-plugin-sdk/website/docs/plugin/sdkv2"
+		},
+		{
+			"path": "../docs/openai-go"
+		}
+	],
+	"settings": {}
+}

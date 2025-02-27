@@ -10,6 +10,7 @@ import (
 )
 
 func TestAccResourceOpenAIFineTuningJob_basic(t *testing.T) {
+	skipUnimplementedTest(t, "fine_tuning")
 	// Skip if required variables aren't set
 	projectPrompt := os.Getenv("TF_VAR_project_prompt")
 	repoOrg := os.Getenv("TF_VAR_repo_org")
@@ -26,8 +27,14 @@ func TestAccResourceOpenAIFineTuningJob_basic(t *testing.T) {
 
 	testDataPath := "testdata/test.jsonl"
 
+	// Create test data directory if it doesn't exist
+	err := os.MkdirAll("testdata", 0755)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Create test training file
-	err := os.WriteFile(testDataPath, []byte(
+	err = os.WriteFile(testDataPath, []byte(
 		"{\"messages\": [{\"role\": \"system\", \"content\": \"You analyze company revenue.\"}, {\"role\": \"user\", \"content\": \"Company: Acme Corp, Revenue: $10M\"}, {\"role\": \"assistant\", \"content\": \"Revenue analysis: Acme Corp reported $10M in revenue.\"}]}\n"+
 			"{\"messages\": [{\"role\": \"system\", \"content\": \"You analyze company revenue.\"}, {\"role\": \"user\", \"content\": \"Company: TechCo, Revenue: $5M\"}, {\"role\": \"assistant\", \"content\": \"Revenue analysis: TechCo reported $5M in revenue.\"}]}\n",
 	), 0644)

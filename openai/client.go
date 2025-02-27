@@ -90,7 +90,15 @@ type Assistant struct {
 
 // AssistantTool represents a tool that can be used by an assistant
 type AssistantTool struct {
-	Type string `json:"type"`
+	Type     string              `json:"type"`
+	Function *FunctionDefinition `json:"function,omitempty"`
+}
+
+// FunctionDefinition represents the definition of a function tool
+type FunctionDefinition struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Parameters  string `json:"parameters"`
 }
 
 // CreateAssistantRequest represents the parameters for creating an assistant
@@ -175,7 +183,11 @@ type CreateChatCompletionRequest struct {
 	Model          string                  `json:"model"`
 	Messages       []ChatCompletionMessage `json:"messages"`
 	Temperature    float32                 `json:"temperature,omitempty"`
-	ResponseFormat map[string]string       `json:"response_format,omitempty"`
+	ResponseFormat *ResponseFormat         `json:"response_format,omitempty"`
+}
+
+type ResponseFormat struct {
+	Type string `json:"type"`
 }
 
 // NewClient creates a new OpenAI API client
