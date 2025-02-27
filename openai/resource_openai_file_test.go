@@ -3,18 +3,24 @@ package openai
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
 func TestAccResourceOpenAIFile_basic(t *testing.T) {
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	testDataPath := "testdata/test.jsonl"
+	testDataDir := "testdata"
+	testDataPath := filepath.Join(testDataDir, "test.jsonl")
+
+	// Ensure test data directory exists
+	if err := os.MkdirAll(testDataDir, 0755); err != nil {
+		t.Fatal(err)
+	}
 
 	// Create test file
-	err := os.WriteFile(testDataPath, []byte("{\"prompt\": \"test\", \"completion\": \"test completion\"}\n"), 0644)
-	if err != nil {
+	testData := `{"messages": [{"role": "system", "content": "You are a test assistant."}, {"role": "user", "content": "Hello"}, {"role": "assistant", "content": "Hi there!"}]}`
+	if err := os.WriteFile(testDataPath, []byte(testData+"\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	defer os.Remove(testDataPath)
@@ -24,7 +30,7 @@ func TestAccResourceOpenAIFile_basic(t *testing.T) {
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResourceOpenAIFileConfig(apiKey, testDataPath),
+				Config: testAccResourceOpenAIFileConfig(testDataPath),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(
 						"openai_file.test", "purpose", "fine-tune"),
@@ -38,15 +44,11 @@ func TestAccResourceOpenAIFile_basic(t *testing.T) {
 	})
 }
 
-func testAccResourceOpenAIFileConfig(apiKey, filePath string) string {
+func testAccResourceOpenAIFileConfig(filePath string) string {
 	return fmt.Sprintf(`
-provider "openai" {
-  api_key = "%s"
-}
-
 resource "openai_file" "test" {
   file    = "%s"
   purpose = "fine-tune"
 }
-`, apiKey, filePath)
+`, filePath)
 }

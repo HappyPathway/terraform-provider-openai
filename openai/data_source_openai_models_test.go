@@ -1,36 +1,33 @@
 package openai
 
 import (
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
 func TestAccDataSourceOpenAIModels_basic(t *testing.T) {
-	apiKey := os.Getenv("OPENAI_API_KEY")
-
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDataSourceOpenAIModelsConfig(apiKey),
+				Config: testAccDataSourceOpenAIModelsConfig(),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet(
-						"data.openai_models.test", "models.#"),
+					resource.TestCheckResourceAttr(
+						"data.openai_models.test", "models.#", "1"),
+					resource.TestCheckResourceAttr(
+						"data.openai_models.test", "models.0.id", "gpt-3.5-turbo"),
+					resource.TestCheckResourceAttr(
+						"data.openai_models.test", "models.0.owned_by", "openai"),
 				),
 			},
 		},
 	})
 }
 
-func testAccDataSourceOpenAIModelsConfig(apiKey string) string {
+func testAccDataSourceOpenAIModelsConfig() string {
 	return `
-provider "openai" {
-  api_key = "` + apiKey + `"
-}
-
 data "openai_models" "test" {
 }
 `

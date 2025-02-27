@@ -2,48 +2,56 @@ package openai
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
 func TestAccResourceOpenAIAssistant_basic(t *testing.T) {
-	apiKey := os.Getenv("OPENAI_API_KEY")
-
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResourceOpenAIAssistantConfig(apiKey),
+				Config: testAccResourceOpenAIAssistantConfig(),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(
 						"openai_assistant.test", "name", "Test Assistant"),
 					resource.TestCheckResourceAttr(
-						"openai_assistant.test", "model", "gpt-4"),
+						"openai_assistant.test", "model", "gpt-3.5-turbo"),
 					resource.TestCheckResourceAttr(
 						"openai_assistant.test", "description", "Test assistant for acceptance tests"),
 					resource.TestCheckResourceAttr(
 						"openai_assistant.test", "instructions", "You are a test assistant."),
-					resource.TestCheckResourceAttrSet(
-						"openai_assistant.test", "created_at"),
+					resource.TestCheckResourceAttr(
+						"openai_assistant.test", "tools.#", "1"),
+					resource.TestCheckResourceAttr(
+						"openai_assistant.test", "tools.0.type", "code_interpreter"),
+					resource.TestCheckResourceAttr(
+						"openai_assistant.test", "metadata.test", "true"),
+				),
+			},
+			{
+				Config: testAccResourceOpenAIAssistantConfigUpdated(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(
+						"openai_assistant.test", "name", "Updated Test Assistant"),
+					resource.TestCheckResourceAttr(
+						"openai_assistant.test", "description", "Updated test assistant"),
+					resource.TestCheckResourceAttr(
+						"openai_assistant.test", "tools.#", "0"),
 				),
 			},
 		},
 	})
 }
 
-func testAccResourceOpenAIAssistantConfig(apiKey string) string {
+func testAccResourceOpenAIAssistantConfig() string {
 	return fmt.Sprintf(`
-provider "openai" {
-  api_key = "%s"
-}
-
 resource "openai_assistant" "test" {
   name         = "Test Assistant"
   description  = "Test assistant for acceptance tests"
-  model        = "gpt-4"
+  model        = "gpt-3.5-turbo"
   instructions = "You are a test assistant."
 
   tools {
@@ -54,5 +62,20 @@ resource "openai_assistant" "test" {
     test = "true"
   }
 }
-`, apiKey)
+`)
+}
+
+func testAccResourceOpenAIAssistantConfigUpdated() string {
+	return fmt.Sprintf(`
+resource "openai_assistant" "test" {
+  name         = "Updated Test Assistant"
+  description  = "Updated test assistant"
+  model        = "gpt-3.5-turbo"
+  instructions = "You are a test assistant."
+
+  metadata = {
+    test = "true"
+  }
+}
+`)
 }

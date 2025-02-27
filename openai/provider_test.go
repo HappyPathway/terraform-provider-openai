@@ -1,10 +1,10 @@
 package openai
 
 import (
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/HappyPathway/terraform-provider-openai/openai/testutil"
 )
 
 var testAccProvider *schema.Provider
@@ -12,11 +12,7 @@ var testAccProviderFactories map[string]func() (*schema.Provider, error)
 
 func init() {
 	testAccProvider = Provider()
-	testAccProviderFactories = map[string]func() (*schema.Provider, error){
-		"openai": func() (*schema.Provider, error) {
-			return testAccProvider, nil
-		},
-	}
+	testAccProviderFactories = testutil.ProviderFactories(testAccProvider)
 }
 
 func TestProvider(t *testing.T) {
@@ -30,7 +26,6 @@ func TestProviderImpl(t *testing.T) {
 }
 
 func testAccPreCheck(t *testing.T) {
-	if v := os.Getenv("OPENAI_API_KEY"); v == "" {
-		t.Fatal("OPENAI_API_KEY must be set for acceptance tests")
-	}
+	// Check required test variables
+	testutil.ProviderTestPreCheck(t)
 }
