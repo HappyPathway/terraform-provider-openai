@@ -1,0 +1,29 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+terraform-provider-openai
+
+# Terraform files
+.terraform
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
