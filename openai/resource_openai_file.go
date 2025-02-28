@@ -2,8 +2,10 @@ package openai
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -16,11 +18,26 @@ func resourceOpenAIFile() *schema.Resource {
 		ReadContext:   resourceOpenAIFileRead,
 		DeleteContext: resourceOpenAIFileDelete,
 		Schema: map[string]*schema.Schema{
-			"file": {
+			"file_path": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				Description:  "Path to the file to upload",
+				ExactlyOneOf: []string{"file_path", "content"},
+			},
+			"content": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				Description:  "Direct content to upload as a file",
+				ExactlyOneOf: []string{"file_path", "content"},
+			},
+			"filename": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
+				Computed:    true,
 				ForceNew:    true,
-				Description: "Path to the file to upload",
+				Description: "Name of the file. Required when using content field, computed when using file_path.",
 			},
 			"purpose": {
 				Type:        schema.TypeString,
@@ -38,11 +55,6 @@ func resourceOpenAIFile() *schema.Resource {
 				Computed:    true,
 				Description: "Creation timestamp",
 			},
-			"filename": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "Name of the file",
-			},
 		},
 	}
 }
@@ -51,15 +63,27 @@ func resourceOpenAIFileCreate(ctx context.Context, d *schema.ResourceData, m int
 	config := m.(*Config)
 	client := config.Client
 
-	filePath := d.Get("file").(string)
-	file, err := os.Open(filePath)
-	if err != nil {
-		return diag.FromErr(err)
+	var reader io.Reader
+	var filename string
+
+	if filePath, ok := d.GetOk("file_path"); ok {
+		file, err := os.Open(filePath.(string))
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		defer file.Close()
+		reader = file
+		filename = filePath.(string)
+	} else if content, ok := d.GetOk("content"); ok {
+		reader = strings.NewReader(content.(string))
+		filename = d.Get("filename").(string)
+		if filename == "" {
+			return diag.FromErr(fmt.Errorf("filename is required when using content field"))
+		}
 	}
-	defer file.Close()
 
 	fileObj, err := client.Files.New(ctx, openaiapi.FileNewParams{
-		File:    openaiapi.F[io.Reader](file),
+		File:    openaiapi.FileParam(reader, filename, "application/octet-stream"),
 		Purpose: openaiapi.F(openaiapi.FilePurpose(d.Get("purpose").(string))),
 	})
 	if err != nil {

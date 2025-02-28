@@ -13,14 +13,22 @@ import (
 
 // NewClientFromConfig creates a new OpenAI client from the configuration
 func NewClientFromConfig(config *Config) *openaiapi.Client {
-	opts := []option.RequestOption{
-		option.WithAPIKey(config.APIKey),
-		option.WithMaxRetries(config.RetryMax),
-		option.WithRequestTimeout(config.Timeout),
+	opts := []option.RequestOption{}
+
+	if config.APIKey != "" {
+		opts = append(opts, option.WithAPIKey(config.APIKey))
 	}
 
 	if config.OrgID != "" {
 		opts = append(opts, option.WithOrganization(config.OrgID))
+	}
+
+	if config.RetryMax > 0 {
+		opts = append(opts, option.WithMaxRetries(config.RetryMax))
+	}
+
+	if config.Timeout > 0 {
+		opts = append(opts, option.WithRequestTimeout(config.Timeout))
 	}
 
 	return openaiapi.NewClient(opts...)

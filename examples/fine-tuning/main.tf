@@ -1,35 +1,34 @@
 terraform {
   required_providers {
     openai = {
-      source = "HappyPathway/openai"
+      source = "openai/openai"
     }
   }
+  required_version = ">= 0.13"
 }
 
-provider "openai" {}
+provider "openai" {
+  # Configuration loaded from environment variables:
+  # OPENAI_API_KEY
+  # OPENAI_ORGANIZATION_ID (optional)
+}
 
-# Upload training data file
+# Upload a file for fine-tuning
 resource "openai_file" "training_data" {
-  content  = filebase64("${path.module}/training_data.jsonl")
-  filename = "training_data.jsonl"
-  purpose  = "fine-tune"
+  file    = "${path.module}/training_data.jsonl"
+  purpose = "fine-tune"
 }
 
-# Create fine-tuning job
-resource "openai_fine_tuning_job" "custom_model" {
-  model          = "gpt-3.5-turbo"
-  training_file  = openai_file.training_data.id
+# Example of retrieving information about a fine-tuned model
+# Note: The model must be created through the OpenAI API or CLI first
+data "openai_fine_tuned_model" "custom_model" {
+  model_id = "ft:gpt-3.5-turbo:my-org:custom_model:id123" # Replace with your model ID
 }
 
-# Optional: Data source to check available models
-data "openai_model" "fine_tuned" {
-  model_id = openai_fine_tuning_job.custom_model
-}
-
-output "fine_tuned_model" {
-  value = data.openai_model.fine_tuned.id
-}
-
-output "training_status" {
-  value = openai_fine_tuning_job.custom_model.status
+output "model_info" {
+  value = {
+    id        = data.openai_fine_tuned_model.custom_model.id
+    created   = data.openai_fine_tuned_model.custom_model.created
+    owned_by  = data.openai_fine_tuned_model.custom_model.owned_by
+  }
 }

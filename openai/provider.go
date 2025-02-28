@@ -26,50 +26,41 @@ func Provider() *schema.Provider {
 		Schema: map[string]*schema.Schema{
 			"api_key": {
 				Type:        schema.TypeString,
-				Optional:    true,
+				Required:    true,
 				Sensitive:   true,
 				DefaultFunc: schema.EnvDefaultFunc("OPENAI_API_KEY", nil),
-				Description: "The API key for OpenAI API operations. Can be specified with the OPENAI_API_KEY environment variable.",
 			},
-			"organization_id": {
+			"org_id": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("OPENAI_ORGANIZATION_ID", nil),
-				Description: "The Organization ID for OpenAI API operations. Can be specified with the OPENAI_ORGANIZATION_ID environment variable.",
+				DefaultFunc: schema.EnvDefaultFunc("OPENAI_ORG_ID", nil),
 			},
 			"retry_max": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Default:     2,
-				Description: "Maximum number of retries for API requests",
-			},
-			"retry_delay": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Default:     5,
-				Description: "Delay between retries in seconds",
+				Type:     schema.TypeInt,
+				Optional: true,
+				Default:  3,
 			},
 			"timeout": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Default:     30,
-				Description: "Timeout for API requests in seconds",
+				Type:     schema.TypeInt,
+				Optional: true,
+				Default:  30,
 			},
 		},
-		DataSourcesMap: map[string]*schema.Resource{
-			"openai_model":     dataSourceOpenAIModel(),
-			"openai_models":    dataSourceOpenAIModels(),
-			"openai_assistant": dataSourceOpenAIAssistant(),
-			"openai_message":   dataSourceOpenAIMessage(),
-		},
+
 		ResourcesMap: map[string]*schema.Resource{
-			"openai_file":              resourceOpenAIFile(),
-			"openai_assistant":         resourceOpenAIAssistant(),
-			"openai_fine_tuning_job":   resourceOpenAIFineTuningJob(),
-			"openai_thread":            resourceOpenAIThread(),
-			"openai_message":           resourceOpenAIMessage(),
-			"openai_beta_vector_store": resourceOpenAIVectorStore(),
+			"openai_thread":    resourceOpenAIThread(),
+			"openai_assistant": resourceOpenAIAssistant(),
 		},
+
+		DataSourcesMap: map[string]*schema.Resource{
+			"openai_model":            dataSourceOpenAIModel(),
+			"openai_file":             dataSourceOpenAIFile(),
+			"openai_models":           dataSourceOpenAIModels(),
+			"openai_fine_tuned_model": dataSourceOpenAIFineTunedModel(),
+			"openai_assistant":        dataSourceOpenAIAssistant(),
+			"openai_message":          dataSourceOpenAIMessage(),
+		},
+
 		ConfigureContextFunc: providerConfigure,
 	}
 }
@@ -88,9 +79,15 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	}
 
 	retryMax := d.Get("retry_max").(int)
-	retryDelay := time.Duration(d.Get("retry_delay").(int)) * time.Second
 	timeout := time.Duration(d.Get("timeout").(int)) * time.Second
-	orgID := d.Get("organization_id").(string)
+	orgID := d.Get("org_id").(string)
+
+	config := &Config{
+		APIKey:   apiKey,
+		OrgID:    orgID,
+		RetryMax: retryMax,
+		Timeout:  timeout,
+	}
 
 	opts := []option.RequestOption{
 		option.WithAPIKey(apiKey),
@@ -103,16 +100,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		opts = append(opts, option.WithOrganization(orgID))
 	}
 
-	client := openaiapi.NewClient(opts...)
-
-	config := &Config{
-		APIKey:     apiKey,
-		OrgID:      orgID,
-		RetryMax:   retryMax,
-		RetryDelay: retryDelay,
-		Timeout:    timeout,
-		Client:     client,
-	}
+	config.Client = openaiapi.NewClient(opts...)
 
 	return config, nil
 }

@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  dev:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+      - go-cache:/go
+      - terraform-cache:/root/.terraform.d
+      - ~/.ssh:/root/.ssh:ro  # For git operations
+      - ~/.gitconfig:/root/.gitconfig:ro
+      - zsh-history:/root/.zsh_history
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_ORGANIZATION_ID=${OPENAI_ORGANIZATION_ID}
+      - TF_LOG=${TF_LOG:-INFO}  # Terraform logging level
+      - TF_LOG_PATH=${TF_LOG_PATH:-/app/terraform.log}
+    working_dir: /app
+    # Using zsh as our shell
+    entrypoint: /bin/zsh
+    # Keep container running and allocate TTY
+    tty: true
+    stdin_open: true
+
+volumes:
+  go-cache:  # Persist Go module cache
+  terraform-cache:  # Persist Terraform plugins and cache
+  zsh-history:  # Persist shell history

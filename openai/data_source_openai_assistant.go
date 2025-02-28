@@ -89,11 +89,10 @@ func dataSourceOpenAIAssistant() *schema.Resource {
 }
 
 func dataSourceOpenAIAssistantRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
-
+	config := m.(*Config)
+	client := config.Client
 	assistantID := d.Get("assistant_id").(string)
-
-	assistant, err := client.GetAssistant(ctx, assistantID)
+	assistant, err := client.Beta.Assistants.Get(ctx, assistantID)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -110,8 +109,7 @@ func dataSourceOpenAIAssistantRead(ctx context.Context, d *schema.ResourceData, 
 		toolMap := map[string]interface{}{
 			"type": tool.Type,
 		}
-
-		if tool.Type == "function" && tool.Function != nil {
+		if tool.Type == "function" && tool.Function.Name != "" {
 			toolMap["name"] = tool.Function.Name
 			toolMap["description"] = tool.Function.Description
 			toolMap["parameters"] = tool.Function.Parameters
@@ -120,8 +118,13 @@ func dataSourceOpenAIAssistantRead(ctx context.Context, d *schema.ResourceData, 
 	}
 	d.Set("tools", tools)
 
-	d.Set("file_ids", assistant.FileIDs)
-	d.Set("metadata", assistant.Metadata)
+	// Handle file IDs from tool resources
+	var fileIDs []string
+	if assistant.ToolResources.CodeInterpreter.FileIDs != nil {
+		fileIDs = append(fileIDs, assistant.ToolResources.CodeInterpreter.FileIDs...)
+	}
+	d.Set("file_ids", fileIDs)
 
+	d.Set("metadata", assistant.Metadata)
 	return nil
 }

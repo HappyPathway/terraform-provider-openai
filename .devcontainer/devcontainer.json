@@ -1,0 +1,42 @@
+{
+  "name": "Terraform OpenAI Provider Dev",
+  "dockerComposeFile": ["../docker-compose.yml"],
+  "service": "dev",
+  "workspaceFolder": "/app",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "hashicorp.terraform",
+        "ms-azuretools.vscode-docker",
+        "github.copilot",
+        "davidanson.vscode-markdownlint",
+        "redhat.vscode-yaml"
+      ],
+      "settings": {
+        "go.useLanguageServer": true,
+        "go.lintTool": "golangci-lint",
+        "go.testFlags": ["-v"],
+        "[go]": {
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": true
+          }
+        }
+      }
+    }
+  },
+  "remoteUser": "root",
+  "features": {
+    "ghcr.io/devcontainers/features/terraform:1": {
+      "version": "1.7.4",
+      "tflint": "latest",
+      "terragrunt": "none"
+    }
+  },
+  "containerEnv": {
+    "TF_LOG": "INFO",
+    "TF_LOG_PATH": "/app/terraform.log"
+  },
+  "postCreateCommand": "go mod download && make build"
+}
