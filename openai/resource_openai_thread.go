@@ -51,40 +51,25 @@ func resourceOpenAIThread() *schema.Resource {
 				ForceNew: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"role": {
+							Type:         schema.TypeString,
+							Required:     true,
+							ValidateFunc: validation.StringInSlice([]string{"user", "assistant"}, false),
+							Description:  "The role of the entity that is creating the message.",
+						},
 						"content": {
 							Type:        schema.TypeString,
 							Required:    true,
 							Description: "The content of the message.",
 						},
-						"role": {
-							Type:         schema.TypeString,
-							Required:     true,
-							ValidateFunc: validation.StringInSlice([]string{"user", "assistant"}, false),
-							Description:  "The role of the entity that is creating the message. Either 'user' or 'assistant'.",
-						},
-						"file_ids": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-							Description: "List of File IDs to attach to the message.",
-						},
-						"metadata": {
-							Type:     schema.TypeMap,
-							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-							Description: "Set of key-value pairs that can be attached to the message.",
-						},
 					},
 				},
-				Description: "A list of messages to start the thread with.",
+				Description: "Initial messages to create with the thread. Can only be set during creation.",
 			},
 			"tool_resources": {
 				Type:     schema.TypeList,
 				Optional: true,
+				ForceNew: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -126,7 +111,7 @@ func resourceOpenAIThread() *schema.Resource {
 						},
 					},
 				},
-				Description: "Configuration for the tools available in this thread.",
+				Description: "Configuration for the tools available in this thread. Can only be set during creation.",
 			},
 			"created_at": {
 				Type:        schema.TypeInt,
@@ -143,105 +128,75 @@ func resourceOpenAIThreadCreate(ctx context.Context, d *schema.ResourceData, m i
 
 	params := &openaiapi.BetaThreadNewParams{}
 
+	// Convert metadata
+	if v, ok := d.GetOk("metadata"); ok {
+		metadata := shared.MetadataParam{}
+		for key, value := range v.(map[string]interface{}) {
+			metadata[key] = value.(string)
+		}
+		params.Metadata = openaiapi.F(metadata)
+	}
+
+	// Convert messages for thread creation
 	if v, ok := d.GetOk("messages"); ok {
-		messages := make([]openaiapi.BetaThreadNewParamsMessage, len(v.([]interface{})))
 		messagesList := v.([]interface{})
+		messages := make([]openaiapi.BetaThreadNewParamsMessage, len(messagesList))
 
 		for i, msg := range messagesList {
 			msgMap := msg.(map[string]interface{})
 
 			content := []openaiapi.MessageContentPartParamUnion{
 				openaiapi.TextContentBlockParam{
-					Text: openaiapi.String(msgMap["content"].(string)),
 					Type: openaiapi.F(openaiapi.TextContentBlockParamTypeText),
+					Text: openaiapi.F(msgMap["content"].(string)),
 				},
 			}
 
-			role := openaiapi.BetaThreadNewParamsMessagesRoleUser
-			if r, ok := msgMap["role"].(string); ok {
-				if r == "assistant" {
-					role = openaiapi.BetaThreadNewParamsMessagesRoleAssistant
-				}
-			}
+			role := openaiapi.BetaThreadNewParamsMessagesRole(msgMap["role"].(string))
 
-			message := openaiapi.BetaThreadNewParamsMessage{
-				Content: openaiapi.F(content),
+			messages[i] = openaiapi.BetaThreadNewParamsMessage{
 				Role:    openaiapi.F(role),
+				Content: openaiapi.F(content),
 			}
-
-			if fileIDs, ok := msgMap["file_ids"].([]interface{}); ok && len(fileIDs) > 0 {
-				ids := make([]string, len(fileIDs))
-				for j, id := range fileIDs {
-					ids[j] = id.(string)
-				}
-				attachments := make([]openaiapi.BetaThreadNewParamsMessagesAttachment, len(ids))
-				for j, id := range ids {
-					attachments[j] = openaiapi.BetaThreadNewParamsMessagesAttachment{
-						FileID: openaiapi.F(id),
-						Tools: openaiapi.F([]openaiapi.BetaThreadNewParamsMessagesAttachmentsToolUnion{
-							openaiapi.CodeInterpreterToolParam{
-								Type: openaiapi.F(openaiapi.CodeInterpreterToolTypeCodeInterpreter),
-							},
-						}),
-					}
-				}
-				message.Attachments = openaiapi.F(attachments)
-			}
-
-			if metadata, ok := msgMap["metadata"].(map[string]interface{}); ok {
-				meta := shared.MetadataParam{}
-				for key, value := range metadata {
-					meta[key] = value.(string)
-				}
-				message.Metadata = openaiapi.F(meta)
-			}
-
-			messages[i] = message
 		}
 
 		params.Messages = openaiapi.F(messages)
 	}
 
-	if v, ok := d.GetOk("metadata"); ok {
-		metadata := shared.MetadataParam{}
-		metaMap := v.(map[string]interface{})
-		for key, value := range metaMap {
-			metadata[key] = value.(string)
-		}
-		params.Metadata = openaiapi.F(metadata)
-	}
-
+	// Convert tool resources
 	if v, ok := d.GetOk("tool_resources"); ok {
-		toolResources := v.([]interface{})[0].(map[string]interface{})
-		tr := openaiapi.BetaThreadNewParamsToolResources{}
+		if len(v.([]interface{})) > 0 {
+			toolResources := v.([]interface{})[0].(map[string]interface{})
+			tr := openaiapi.BetaThreadNewParamsToolResources{}
 
-		if ci, ok := toolResources["code_interpreter"]; ok && len(ci.([]interface{})) > 0 {
-			ciConfig := ci.([]interface{})[0].(map[string]interface{})
-			if fileIDs, ok := ciConfig["file_ids"]; ok {
-				fileIDsList := make([]string, len(fileIDs.([]interface{})))
-				for i, id := range fileIDs.([]interface{}) {
-					fileIDsList[i] = id.(string)
+			if ci, ok := toolResources["code_interpreter"]; ok && len(ci.([]interface{})) > 0 {
+				ciConfig := ci.([]interface{})[0].(map[string]interface{})
+				if fileIDs, ok := ciConfig["file_ids"]; ok {
+					fileIDsList := make([]string, len(fileIDs.([]interface{})))
+					for i, id := range fileIDs.([]interface{}) {
+						fileIDsList[i] = id.(string)
+					}
+					tr.CodeInterpreter = openaiapi.F(openaiapi.BetaThreadNewParamsToolResourcesCodeInterpreter{
+						FileIDs: openaiapi.F(fileIDsList),
+					})
 				}
-				tr.CodeInterpreter = openaiapi.F(openaiapi.BetaThreadNewParamsToolResourcesCodeInterpreter{
-					FileIDs: openaiapi.F(fileIDsList),
-				})
 			}
-		}
 
-		if fs, ok := toolResources["file_search"]; ok && len(fs.([]interface{})) > 0 {
-			fsConfig := fs.([]interface{})[0].(map[string]interface{})
-			if vectorStoreIDs, ok := fsConfig["vector_store_ids"]; ok {
-				vectorStoreIDsList := make([]string, len(vectorStoreIDs.([]interface{})))
-				for i, id := range vectorStoreIDs.([]interface{}) {
-					vectorStoreIDsList[i] = id.(string)
+			if fs, ok := toolResources["file_search"]; ok && len(fs.([]interface{})) > 0 {
+				fsConfig := fs.([]interface{})[0].(map[string]interface{})
+				if vectorStoreIDs, ok := fsConfig["vector_store_ids"]; ok {
+					vectorStoreIDsList := make([]string, len(vectorStoreIDs.([]interface{})))
+					for i, id := range vectorStoreIDs.([]interface{}) {
+						vectorStoreIDsList[i] = id.(string)
+					}
+					tr.FileSearch = openaiapi.F(openaiapi.BetaThreadNewParamsToolResourcesFileSearch{
+						VectorStoreIDs: openaiapi.F(vectorStoreIDsList),
+					})
 				}
-				tr.FileSearch = openaiapi.F(openaiapi.BetaThreadNewParamsToolResourcesFileSearch{
-					VectorStoreIDs: openaiapi.F(vectorStoreIDsList),
-				})
 			}
-		}
 
-		params.ToolResources = openaiapi.F(tr)
+			params.ToolResources = openaiapi.F(tr)
+		}
 	}
 
 	thread, err := client.Beta.Threads.New(ctx, *params)
@@ -250,7 +205,6 @@ func resourceOpenAIThreadCreate(ctx context.Context, d *schema.ResourceData, m i
 	}
 
 	d.SetId(thread.ID)
-
 	return resourceOpenAIThreadRead(ctx, d, m)
 }
 
@@ -269,6 +223,7 @@ func resourceOpenAIThreadRead(ctx context.Context, d *schema.ResourceData, m int
 		d.Set("metadata", thread.Metadata)
 	}
 
+	// Set tool resources if present
 	tr := make([]interface{}, 1)
 	trMap := make(map[string]interface{})
 
@@ -299,48 +254,53 @@ func resourceOpenAIThreadRead(ctx context.Context, d *schema.ResourceData, m int
 func resourceOpenAIThreadUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	config := m.(*Config)
 	client := config.Client
+
 	params := &openaiapi.BetaThreadUpdateParams{}
 
+	// Only update metadata and tool resources
 	if d.HasChange("metadata") {
 		metadata := shared.MetadataParam{}
-		metaMap := d.Get("metadata").(map[string]interface{})
-		for key, value := range metaMap {
-			metadata[key] = value.(string)
+		if v, ok := d.GetOk("metadata"); ok {
+			for key, value := range v.(map[string]interface{}) {
+				metadata[key] = value.(string)
+			}
 		}
 		params.Metadata = openaiapi.F(metadata)
 	}
 
 	if d.HasChange("tool_resources") {
-		toolResources := d.Get("tool_resources").([]interface{})[0].(map[string]interface{})
-		tr := openaiapi.BetaThreadUpdateParamsToolResources{}
+		if v, ok := d.GetOk("tool_resources"); ok && len(v.([]interface{})) > 0 {
+			toolResources := v.([]interface{})[0].(map[string]interface{})
+			tr := openaiapi.BetaThreadUpdateParamsToolResources{}
 
-		if ci, ok := toolResources["code_interpreter"]; ok && len(ci.([]interface{})) > 0 {
-			ciConfig := ci.([]interface{})[0].(map[string]interface{})
-			if fileIDs, ok := ciConfig["file_ids"]; ok {
-				fileIDsList := make([]string, len(fileIDs.([]interface{})))
-				for i, id := range fileIDs.([]interface{}) {
-					fileIDsList[i] = id.(string)
+			if ci, ok := toolResources["code_interpreter"]; ok && len(ci.([]interface{})) > 0 {
+				ciConfig := ci.([]interface{})[0].(map[string]interface{})
+				if fileIDs, ok := ciConfig["file_ids"]; ok {
+					fileIDsList := make([]string, len(fileIDs.([]interface{})))
+					for i, id := range fileIDs.([]interface{}) {
+						fileIDsList[i] = id.(string)
+					}
+					tr.CodeInterpreter = openaiapi.F(openaiapi.BetaThreadUpdateParamsToolResourcesCodeInterpreter{
+						FileIDs: openaiapi.F(fileIDsList),
+					})
 				}
-				tr.CodeInterpreter = openaiapi.F(openaiapi.BetaThreadUpdateParamsToolResourcesCodeInterpreter{
-					FileIDs: openaiapi.F(fileIDsList),
-				})
 			}
-		}
 
-		if fs, ok := toolResources["file_search"]; ok && len(fs.([]interface{})) > 0 {
-			fsConfig := fs.([]interface{})[0].(map[string]interface{})
-			if vectorStoreIDs, ok := fsConfig["vector_store_ids"]; ok {
-				vectorStoreIDsList := make([]string, len(vectorStoreIDs.([]interface{})))
-				for i, id := range vectorStoreIDs.([]interface{}) {
-					vectorStoreIDsList[i] = id.(string)
+			if fs, ok := toolResources["file_search"]; ok && len(fs.([]interface{})) > 0 {
+				fsConfig := fs.([]interface{})[0].(map[string]interface{})
+				if vectorStoreIDs, ok := fsConfig["vector_store_ids"]; ok {
+					vectorStoreIDsList := make([]string, len(vectorStoreIDs.([]interface{})))
+					for i, id := range vectorStoreIDs.([]interface{}) {
+						vectorStoreIDsList[i] = id.(string)
+					}
+					tr.FileSearch = openaiapi.F(openaiapi.BetaThreadUpdateParamsToolResourcesFileSearch{
+						VectorStoreIDs: openaiapi.F(vectorStoreIDsList),
+					})
 				}
-				tr.FileSearch = openaiapi.F(openaiapi.BetaThreadUpdateParamsToolResourcesFileSearch{
-					VectorStoreIDs: openaiapi.F(vectorStoreIDsList),
-				})
 			}
-		}
 
-		params.ToolResources = openaiapi.F(tr)
+			params.ToolResources = openaiapi.F(tr)
+		}
 	}
 
 	_, err := client.Beta.Threads.Update(ctx, d.Id(), *params)

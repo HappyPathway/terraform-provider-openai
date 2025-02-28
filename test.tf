@@ -1,55 +1,103 @@
 terraform {
   required_providers {
     openai = {
-      source = "happypathway/openai"
+      source = "HappyPathway/openai"
     }
   }
 }
 
 provider "openai" {
-  # Configure your API key via OPENAI_API_KEY environment variable
+  # Configuration will be loaded from environment variables:
+  # OPENAI_API_KEY for api_key
+  # OPENAI_ORGANIZATION_ID for organization_id (optional)
+  retry_max   = 3
+  retry_delay = 5
+  timeout     = 30
 }
 
-# Test the models data source
-data "openai_models" "available" {}
+# Data Sources
+data "openai_models" "available" {
+  # Lists all available models
+}
 
-# Test specific model data source
 data "openai_model" "gpt4" {
   model_id = "gpt-4"
 }
 
-# Test file resource
-resource "openai_file" "test_file" {
-  file    = "knowledge_base.txt"
+# File Resource - Used by other resources
+resource "openai_file" "knowledge_base" {
+  file    = "${path.module}/knowledge_base.txt"
   purpose = "assistants"
 }
 
-# Test assistant resource with comprehensive configuration
-resource "openai_assistant" "test" {
+# Vector Store Resource - For file search capability
+resource "openai_beta_vector_store" "example" {
+  name = "test-store-1"
+  metadata = {
+    purpose = "example"
+    env     = "development"
+  }
+  file_ids = [openai_file.knowledge_base.id]
+}
+
+# Thread Resource - For managing conversations
+resource "openai_thread" "example" {
+  metadata = {
+    purpose = "example"
+    env     = "development"
+  }
+
+  tool_resources {
+    code_interpreter {
+      file_ids = [openai_file.knowledge_base.id]
+    }
+    file_search {
+      vector_store_ids = [openai_beta_vector_store.example.id]
+    }
+  }
+
+  # Move message to separate resource to avoid recreation cycles
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Message Resource - For adding messages to threads
+resource "openai_message" "initial" {
+  thread_id = openai_thread.example.id
+  role      = "user"
+  
+  content {
+    type = "text"
+    text = "What insights can you provide from the knowledge base?"
+  }
+
+  file_ids = [openai_file.knowledge_base.id]
+  metadata = {
+    type = "initial_query"
+    tags = "knowledge_base,analysis"
+  }
+}
+
+# Assistant Resource - AI assistant with various capabilities
+resource "openai_assistant" "data_analyst" {
   name         = "Data Analysis Assistant"
-  description  = "A sophisticated assistant for data analysis and visualization"
-  model        = "gpt-4-turbo-preview"
-  instructions = <<-EOT
-    You are a specialized data analysis assistant with the following capabilities:
-    1. Analyze and interpret data using Python and other tools
-    2. Create visualizations and charts
-    3. Search through provided documentation and data files
-    4. Execute custom functions for data processing
-    Please provide clear explanations with your analysis and always show your work.
-  EOT
+  description  = "An assistant that helps with data analysis and visualization"
+  model        = "gpt-4-1106-preview"
+  instructions = "You are a data analysis expert. Use the provided tools to analyze data and create visualizations."
 
   tools {
     type = "code_interpreter"
   }
 
   tools {
-    type = "file_search"
+    type = "retrieval"
   }
 
   tools {
     type        = "function"
-    name        = "process_data"
-    description = "Process and analyze dataset with custom parameters"
+    name        = "analyze_dataset"
+    description = "Analyze a dataset with specified parameters"
     parameters  = jsonencode({
       type = "object"
       properties = {
@@ -72,95 +120,28 @@ resource "openai_assistant" "test" {
     })
   }
 
-  file_ids = [openai_file.test_file.id]
-
+  file_ids = [openai_file.knowledge_base.id]
   metadata = {
     capability     = "data_analysis"
-    version       = "1.0"
     specialization = "statistical_analysis"
+    version       = "1.0"
   }
 }
 
-# Test content generator resource
-resource "openai_content_generator" "test" {
-  model       = "gpt-3.5-turbo"
-  temperature = 0.7
-
-  messages {
-    role    = "user"
-    content = "What is 2 + 2? Respond with just the number."
+# Outputs
+output "test_thread" {
+  value = {
+    id = openai_thread.example.id
+    metadata = openai_thread.example.metadata
+    created_at = openai_thread.example.created_at
   }
 }
 
-# Test content generator resource with JSON response
-resource "openai_content_generator" "json_test" {
-  model       = "gpt-4-turbo-preview"
-  temperature = 0.7
-
-  messages {
-    role    = "system"
-    content = <<-EOT
-      You are a helpful assistant that provides structured data about movies.
-      Always respond with valid JSON that has the following structure:
-      {
-        "title": "string",
-        "year": number,
-        "directors": ["string"],
-        "main_actors": [{"name": "string", "character": "string"}],
-        "rating": {"value": number, "source": "IMDb"}
-      }
-    EOT
+output "test_message" {
+  value = {
+    id = openai_message.initial.id
+    thread_id = openai_message.initial.thread_id
+    status = openai_message.initial.status
+    created_at = openai_message.initial.created_at
   }
-
-  messages {
-    role    = "user"
-    content = "Give me information about The Matrix movie from 1999."
-  }
-
-  response_format {
-    type = "json_object"
-  }
-}
-
-output "test" {
-  value = openai_assistant.test
-}
-
-output "test_file" {
-  value = openai_file.test_file
-}
-
-output "test_content_generator" {
-  value = openai_content_generator.test
-}
-
-output test_content_generator_anser {
-  value = jsondecode(openai_content_generator.test.raw_response)
-}
-
-# Output showing both raw and parsed JSON response
-output "matrix_movie_raw" {
-  value = openai_content_generator.json_test.raw_response
-}
-
-output "matrix_movie_content" {
-  value = jsondecode(openai_content_generator.json_test.content)
-}
-
-output "matrix_movie_actors" {
-  description = "Just the main actors from the movie"
-  value = jsondecode(openai_content_generator.json_test.content).main_actors
-}
-
-output "matrix_movie_rating" {
-  description = "Just the rating information"
-  value = jsondecode(openai_content_generator.json_test.content).rating
-}
-
-output "models" {
-  value = data.openai_models.available
-}
-
-output "model" {
-  value = data.openai_model.gpt4
 }

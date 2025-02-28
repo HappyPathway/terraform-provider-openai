@@ -24,9 +24,11 @@ fmt:
 # Install provider locally for testing
 .PHONY: install
 install: build
+	rm -rf .terraform .terraform.lock.hcl
 	mkdir -p ~/.terraform.d/plugins/HappyPathway/openai/0.1.0/darwin_amd64
 	mv terraform-provider-openai ~/.terraform.d/plugins/HappyPathway/openai/0.1.0/darwin_amd64/
-
+	terraform init -upgrade
+	
 # Clean build artifacts
 .PHONY: clean
 clean:

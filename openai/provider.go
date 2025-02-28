@@ -28,12 +28,14 @@ func Provider() *schema.Provider {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Sensitive:   true,
-				Description: "OpenAI API Key",
+				DefaultFunc: schema.EnvDefaultFunc("OPENAI_API_KEY", nil),
+				Description: "The API key for OpenAI API operations. Can be specified with the OPENAI_API_KEY environment variable.",
 			},
 			"organization_id": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "OpenAI Organization ID",
+				DefaultFunc: schema.EnvDefaultFunc("OPENAI_ORGANIZATION_ID", nil),
+				Description: "The Organization ID for OpenAI API operations. Can be specified with the OPENAI_ORGANIZATION_ID environment variable.",
 			},
 			"retry_max": {
 				Type:        schema.TypeInt,
@@ -58,13 +60,15 @@ func Provider() *schema.Provider {
 			"openai_model":     dataSourceOpenAIModel(),
 			"openai_models":    dataSourceOpenAIModels(),
 			"openai_assistant": dataSourceOpenAIAssistant(),
+			"openai_message":   dataSourceOpenAIMessage(),
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"openai_file":              resourceOpenAIFile(),
 			"openai_assistant":         resourceOpenAIAssistant(),
 			"openai_fine_tuning_job":   resourceOpenAIFineTuningJob(),
-			"openai_content_generator": ResourceOpenAIContentGenerator(),
 			"openai_thread":            resourceOpenAIThread(),
+			"openai_message":           resourceOpenAIMessage(),
+			"openai_beta_vector_store": resourceOpenAIVectorStore(),
 		},
 		ConfigureContextFunc: providerConfigure,
 	}
@@ -92,6 +96,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		option.WithAPIKey(apiKey),
 		option.WithMaxRetries(retryMax),
 		option.WithRequestTimeout(timeout),
+		option.WithHeader("OpenAI-Beta", "assistants=v2"),
 	}
 
 	if orgID != "" {
