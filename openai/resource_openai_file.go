@@ -2,10 +2,12 @@ package openai
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	openaiapi "github.com/openai/openai-go"
 )
 
 func resourceOpenAIFile() *schema.Resource {
@@ -46,49 +48,50 @@ func resourceOpenAIFile() *schema.Resource {
 }
 
 func resourceOpenAIFileCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+	config := m.(*Config)
+	client := config.Client
 
 	filePath := d.Get("file").(string)
-	fileContent, err := ioutil.ReadFile(filePath)
+	file, err := os.Open(filePath)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	defer file.Close()
+
+	fileObj, err := client.Files.New(ctx, openaiapi.FileNewParams{
+		File:    openaiapi.F[io.Reader](file),
+		Purpose: openaiapi.F(openaiapi.FilePurpose(d.Get("purpose").(string))),
+	})
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	uploadReq := &FileUploadRequest{
-		File:    fileContent,
-		Purpose: d.Get("purpose").(string),
-	}
-
-	file, err := client.UploadFile(ctx, uploadReq)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	d.SetId(file.ID)
-
+	d.SetId(fileObj.ID)
 	return resourceOpenAIFileRead(ctx, d, m)
 }
 
 func resourceOpenAIFileRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+	config := m.(*Config)
+	client := config.Client
 
-	file, err := client.GetFile(ctx, d.Id())
+	fileObj, err := client.Files.Get(ctx, d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	d.Set("bytes", file.Bytes)
-	d.Set("created_at", file.CreatedAt)
-	d.Set("filename", file.Filename)
-	d.Set("purpose", file.Purpose)
+	d.Set("bytes", fileObj.Bytes)
+	d.Set("created_at", fileObj.CreatedAt)
+	d.Set("filename", fileObj.Filename)
+	d.Set("purpose", string(fileObj.Purpose))
 
 	return nil
 }
 
 func resourceOpenAIFileDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+	config := m.(*Config)
+	client := config.Client
 
-	err := client.DeleteFile(ctx, d.Id())
+	_, err := client.Files.Delete(ctx, d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}

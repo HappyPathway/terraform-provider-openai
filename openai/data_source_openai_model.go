@@ -58,29 +58,19 @@ func dataSourceOpenAIModel() *schema.Resource {
 }
 
 func dataSourceOpenAIModelRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+	config := m.(*Config)
+	client := config.Client
 
 	modelID := d.Get("model_id").(string)
-	model, err := client.GetModel(ctx, modelID)
+	model, err := client.Models.Get(ctx, modelID)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	d.SetId(model.ID)
-	d.Set("owned_by", model.OwnedBy)
-
-	permissions := make([]interface{}, len(model.Permission))
-	for i, p := range model.Permission {
-		permission := make(map[string]interface{})
-		permission["id"] = p.ID
-		permission["object"] = p.Object
-		permission["created"] = p.Created
-		permission["allow_create_engine"] = p.AllowCreateEngine
-		permission["allow_sampling"] = p.AllowSampling
-		permission["allow_fine_tuning"] = p.AllowFineTuning
-		permissions[i] = permission
+	if err := d.Set("owned_by", model.OwnedBy); err != nil {
+		return diag.FromErr(err)
 	}
-	d.Set("permission", permissions)
 
 	return nil
 }

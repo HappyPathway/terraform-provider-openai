@@ -6,6 +6,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	openaiapi "github.com/openai/openai-go"
+	"github.com/openai/openai-go/shared"
 )
 
 func resourceOpenAIAssistant() *schema.Resource {
@@ -90,72 +92,87 @@ func resourceOpenAIAssistant() *schema.Resource {
 }
 
 func resourceOpenAIAssistantCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+	config := m.(*Config)
+	client := config.Client
 
-	req := &CreateAssistantRequest{
-		Name:         d.Get("name").(string),
-		Model:        d.Get("model").(string),
-		Description:  d.Get("description").(string),
-		Instructions: d.Get("instructions").(string),
-	}
-
+	tools := []openaiapi.AssistantToolUnionParam{}
 	if v, ok := d.GetOk("tools"); ok {
-		tools := make([]AssistantTool, len(v.([]interface{})))
 		toolsList := v.([]interface{})
-		for i, tool := range toolsList {
+		for _, tool := range toolsList {
 			toolMap := tool.(map[string]interface{})
-			tools[i] = AssistantTool{
-				Type: toolMap["type"].(string),
-			}
+			toolType := toolMap["type"].(string)
 
-			if tools[i].Type == "function" {
-				var params map[string]interface{}
+			switch toolType {
+			case "code_interpreter":
+				tools = append(tools, openaiapi.CodeInterpreterToolParam{
+					Type: openaiapi.F(openaiapi.CodeInterpreterToolTypeCodeInterpreter),
+				})
+			case "retrieval":
+				tools = append(tools, openaiapi.FileSearchToolParam{
+					Type: openaiapi.F(openaiapi.FileSearchToolTypeFileSearch),
+				})
+			case "function":
+				var params shared.FunctionParameters
 				if err := json.Unmarshal([]byte(toolMap["parameters"].(string)), &params); err != nil {
 					return diag.FromErr(err)
 				}
-
-				tools[i].Function = &FunctionDefinition{
-					Name:        toolMap["name"].(string),
-					Description: toolMap["description"].(string),
-					Parameters:  params,
-				}
+				tools = append(tools, openaiapi.FunctionToolParam{
+					Type: openaiapi.F(openaiapi.FunctionToolTypeFunction),
+					Function: openaiapi.F(openaiapi.FunctionDefinitionParam{
+						Name:        openaiapi.F(toolMap["name"].(string)),
+						Description: openaiapi.F(toolMap["description"].(string)),
+						Parameters:  openaiapi.F(params),
+					}),
+				})
 			}
 		}
-		req.Tools = tools
 	}
 
+	fileIDs := []string{}
 	if v, ok := d.GetOk("file_ids"); ok {
 		fileIDsRaw := v.([]interface{})
-		fileIDs := make([]string, len(fileIDsRaw))
-		for i, id := range fileIDsRaw {
-			fileIDs[i] = id.(string)
+		for _, id := range fileIDsRaw {
+			fileIDs = append(fileIDs, id.(string))
 		}
-		req.FileIDs = fileIDs
 	}
 
+	metadata := shared.MetadataParam{}
 	if v, ok := d.GetOk("metadata"); ok {
-		metadata := make(map[string]string)
 		metaMap := v.(map[string]interface{})
 		for key, value := range metaMap {
 			metadata[key] = value.(string)
 		}
-		req.Metadata = metadata
 	}
 
-	assistant, err := client.CreateAssistant(ctx, req)
+	toolResources := openaiapi.BetaAssistantNewParamsToolResources{}
+	if len(fileIDs) > 0 {
+		toolResources.CodeInterpreter = openaiapi.F(openaiapi.BetaAssistantNewParamsToolResourcesCodeInterpreter{
+			FileIDs: openaiapi.F(fileIDs),
+		})
+	}
+
+	assistant, err := client.Beta.Assistants.New(ctx, openaiapi.BetaAssistantNewParams{
+		Name:          openaiapi.F(d.Get("name").(string)),
+		Model:         openaiapi.F(openaiapi.ChatModel(d.Get("model").(string))),
+		Description:   openaiapi.F(d.Get("description").(string)),
+		Instructions:  openaiapi.F(d.Get("instructions").(string)),
+		Tools:         openaiapi.F(tools),
+		Metadata:      openaiapi.F(metadata),
+		ToolResources: openaiapi.F(toolResources),
+	})
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	d.SetId(assistant.ID)
-
 	return resourceOpenAIAssistantRead(ctx, d, m)
 }
 
 func resourceOpenAIAssistantRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+	config := m.(*Config)
+	client := config.Client
 
-	assistant, err := client.GetAssistant(ctx, d.Id())
+	assistant, err := client.Beta.Assistants.Get(ctx, d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -169,79 +186,109 @@ func resourceOpenAIAssistantRead(ctx context.Context, d *schema.ResourceData, m 
 	tools := make([]interface{}, len(assistant.Tools))
 	for i, tool := range assistant.Tools {
 		toolMap := map[string]interface{}{
-			"type": tool.Type,
+			"type": string(tool.Type),
 		}
 
-		// Handle function configuration in the response
-		if tool.Type == "function" && tool.Function != nil {
-			toolMap["name"] = tool.Function.Name
-			toolMap["description"] = tool.Function.Description
-			toolMap["parameters"] = tool.Function.Parameters
+		// Handle each tool type appropriately
+		switch unionTool := tool.AsUnion().(type) {
+		case *openaiapi.FunctionTool:
+			if unionTool.Function.Name != "" {
+				toolMap["name"] = unionTool.Function.Name
+				toolMap["description"] = unionTool.Function.Description
+				if unionTool.Function.Parameters != nil {
+					paramsJson, err := json.Marshal(unionTool.Function.Parameters)
+					if err != nil {
+						return diag.FromErr(err)
+					}
+					toolMap["parameters"] = string(paramsJson)
+				}
+			}
+		case *openaiapi.CodeInterpreterTool:
+			// code_interpreter tools don't have additional fields
+		case *openaiapi.FileSearchTool:
+			// retrieval/file_search tools don't have additional fields
 		}
 		tools[i] = toolMap
 	}
 	d.Set("tools", tools)
 
-	d.Set("file_ids", assistant.FileIDs)
+	if assistant.ToolResources.CodeInterpreter.FileIDs != nil {
+		d.Set("file_ids", assistant.ToolResources.CodeInterpreter.FileIDs)
+	}
 	d.Set("metadata", assistant.Metadata)
 
 	return nil
 }
 
 func resourceOpenAIAssistantUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+	config := m.(*Config)
+	client := config.Client
 
-	req := &CreateAssistantRequest{
-		Name:         d.Get("name").(string),
-		Model:        d.Get("model").(string),
-		Description:  d.Get("description").(string),
-		Instructions: d.Get("instructions").(string),
-	}
-
+	tools := []openaiapi.AssistantToolUnionParam{}
 	if v, ok := d.GetOk("tools"); ok {
-		tools := make([]AssistantTool, len(v.([]interface{})))
 		toolsList := v.([]interface{})
-		for i, tool := range toolsList {
+		for _, tool := range toolsList {
 			toolMap := tool.(map[string]interface{})
-			tools[i] = AssistantTool{
-				Type: toolMap["type"].(string),
-			}
+			toolType := toolMap["type"].(string)
 
-			if tools[i].Type == "function" {
-				var params map[string]interface{}
+			switch toolType {
+			case "code_interpreter":
+				tools = append(tools, openaiapi.CodeInterpreterToolParam{
+					Type: openaiapi.F(openaiapi.CodeInterpreterToolTypeCodeInterpreter),
+				})
+			case "retrieval":
+				tools = append(tools, openaiapi.FileSearchToolParam{
+					Type: openaiapi.F(openaiapi.FileSearchToolTypeFileSearch),
+				})
+			case "function":
+				var params shared.FunctionParameters
 				if err := json.Unmarshal([]byte(toolMap["parameters"].(string)), &params); err != nil {
 					return diag.FromErr(err)
 				}
-
-				tools[i].Function = &FunctionDefinition{
-					Name:        toolMap["name"].(string),
-					Description: toolMap["description"].(string),
-					Parameters:  params,
-				}
+				tools = append(tools, openaiapi.FunctionToolParam{
+					Type: openaiapi.F(openaiapi.FunctionToolTypeFunction),
+					Function: openaiapi.F(openaiapi.FunctionDefinitionParam{
+						Name:        openaiapi.F(toolMap["name"].(string)),
+						Description: openaiapi.F(toolMap["description"].(string)),
+						Parameters:  openaiapi.F(params),
+					}),
+				})
 			}
 		}
-		req.Tools = tools
 	}
 
+	fileIDs := []string{}
 	if v, ok := d.GetOk("file_ids"); ok {
 		fileIDsRaw := v.([]interface{})
-		fileIDs := make([]string, len(fileIDsRaw))
-		for i, id := range fileIDsRaw {
-			fileIDs[i] = id.(string)
+		for _, id := range fileIDsRaw {
+			fileIDs = append(fileIDs, id.(string))
 		}
-		req.FileIDs = fileIDs
 	}
 
+	metadata := shared.MetadataParam{}
 	if v, ok := d.GetOk("metadata"); ok {
-		metadata := make(map[string]string)
 		metaMap := v.(map[string]interface{})
 		for key, value := range metaMap {
 			metadata[key] = value.(string)
 		}
-		req.Metadata = metadata
 	}
 
-	_, err := client.UpdateAssistant(ctx, d.Id(), req)
+	toolResources := openaiapi.BetaAssistantUpdateParamsToolResources{}
+	if len(fileIDs) > 0 {
+		toolResources.CodeInterpreter = openaiapi.F(openaiapi.BetaAssistantUpdateParamsToolResourcesCodeInterpreter{
+			FileIDs: openaiapi.F(fileIDs),
+		})
+	}
+
+	_, err := client.Beta.Assistants.Update(ctx, d.Id(), openaiapi.BetaAssistantUpdateParams{
+		Name:          openaiapi.F(d.Get("name").(string)),
+		Model:         openaiapi.F(openaiapi.BetaAssistantUpdateParamsModel(d.Get("model").(string))),
+		Description:   openaiapi.F(d.Get("description").(string)),
+		Instructions:  openaiapi.F(d.Get("instructions").(string)),
+		Tools:         openaiapi.F(tools),
+		Metadata:      openaiapi.F(metadata),
+		ToolResources: openaiapi.F(toolResources),
+	})
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -250,9 +297,10 @@ func resourceOpenAIAssistantUpdate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func resourceOpenAIAssistantDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
+	config := m.(*Config)
+	client := config.Client
 
-	err := client.DeleteAssistant(ctx, d.Id())
+	_, err := client.Beta.Assistants.Delete(ctx, d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}

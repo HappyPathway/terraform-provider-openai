@@ -2,7 +2,6 @@ package openai
 
 import (
 	"context"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -12,23 +11,14 @@ import (
 	"github.com/openai/openai-go/shared"
 )
 
-// Config holds the provider configuration
-type Config struct {
-	APIKey     string
-	OrgID      string
-	RetryMax   int
-	RetryDelay time.Duration
-	Timeout    time.Duration
-	Client     *openaiapi.Client
-}
-
 // NewClientFromConfig creates a new OpenAI client from the configuration
 func NewClientFromConfig(config *Config) *openaiapi.Client {
 	opts := []option.RequestOption{
 		option.WithAPIKey(config.APIKey),
 		option.WithMaxRetries(config.RetryMax),
+		option.WithRequestTimeout(config.Timeout),
 	}
-	
+
 	if config.OrgID != "" {
 		opts = append(opts, option.WithOrganization(config.OrgID))
 	}
@@ -159,7 +149,7 @@ func resourceOpenAIThreadCreate(ctx context.Context, d *schema.ResourceData, m i
 
 		for i, msg := range messagesList {
 			msgMap := msg.(map[string]interface{})
-			
+
 			content := []openaiapi.MessageContentPartParamUnion{
 				openaiapi.TextContentBlockParam{
 					Text: openaiapi.String(msgMap["content"].(string)),
@@ -274,7 +264,7 @@ func resourceOpenAIThreadRead(ctx context.Context, d *schema.ResourceData, m int
 	}
 
 	d.Set("created_at", thread.CreatedAt)
-	
+
 	if thread.Metadata != nil {
 		d.Set("metadata", thread.Metadata)
 	}

@@ -11,6 +11,16 @@ import (
 	"github.com/openai/openai-go/option"
 )
 
+// Config holds the provider configuration
+type Config struct {
+	APIKey     string
+	OrgID      string
+	RetryMax   int
+	RetryDelay time.Duration
+	Timeout    time.Duration
+	Client     *openaiapi.Client
+}
+
 func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
@@ -73,16 +83,31 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		return nil, diag.Errorf("api_key must be provided via configuration or OPENAI_API_KEY environment variable")
 	}
 
+	retryMax := d.Get("retry_max").(int)
+	retryDelay := time.Duration(d.Get("retry_delay").(int)) * time.Second
+	timeout := time.Duration(d.Get("timeout").(int)) * time.Second
+	orgID := d.Get("organization_id").(string)
+
 	opts := []option.RequestOption{
 		option.WithAPIKey(apiKey),
-		option.WithMaxRetries(d.Get("retry_max").(int)),
-		option.WithRequestTimeout(time.Duration(d.Get("timeout").(int)) * time.Second),
+		option.WithMaxRetries(retryMax),
+		option.WithRequestTimeout(timeout),
 	}
 
-	if orgID, ok := d.GetOk("organization_id"); ok {
-		opts = append(opts, option.WithOrganization(orgID.(string)))
+	if orgID != "" {
+		opts = append(opts, option.WithOrganization(orgID))
 	}
 
 	client := openaiapi.NewClient(opts...)
-	return &Config{Client: client}, nil
+
+	config := &Config{
+		APIKey:     apiKey,
+		OrgID:      orgID,
+		RetryMax:   retryMax,
+		RetryDelay: retryDelay,
+		Timeout:    timeout,
+		Client:     client,
+	}
+
+	return config, nil
 }
