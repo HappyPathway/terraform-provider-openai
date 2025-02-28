@@ -13,6 +13,7 @@
 - [x] `openai_fine_tuning_job` - Manage fine-tuning jobs (Implementation complete, testing in progress)
 - [x] `openai_assistant` - Manage OpenAI assistants
 - [x] `openai_file` - Manage files for fine-tuning and assistants
+- [ ] `openai_message` - Manage thread messages (In Progress)
 
 ### Data Sources
 - [x] `openai_model` - Information about available models
