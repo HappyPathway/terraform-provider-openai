@@ -6,6 +6,7 @@ import (
 
 	"github.com/darnold/terraform-provider-openai/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -56,7 +57,6 @@ func (r *AssistantResource) Metadata(ctx context.Context, req resource.MetadataR
 func (r *AssistantResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Create and manage OpenAI Assistants to help with tasks using models, tools, and knowledge.",
-
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -123,7 +123,6 @@ func (r *AssistantResource) Configure(ctx context.Context, req resource.Configur
 	if req.ProviderData == nil {
 		return
 	}
-
 	client, ok := req.ProviderData.(*client.Client)
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -132,13 +131,11 @@ func (r *AssistantResource) Configure(ctx context.Context, req resource.Configur
 		)
 		return
 	}
-
 	r.client = client
 }
 
 func (r *AssistantResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan AssistantResourceModel
-
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -152,15 +149,18 @@ func (r *AssistantResource) Create(ctx context.Context, req resource.CreateReque
 
 	// Set optional parameters
 	if !plan.Name.IsNull() {
-		assistantReq.Name = plan.Name.ValueString()
+		name := plan.Name.ValueString()
+		assistantReq.Name = &name
 	}
 
 	if !plan.Description.IsNull() {
-		assistantReq.Description = plan.Description.ValueString()
+		description := plan.Description.ValueString()
+		assistantReq.Description = &description
 	}
 
 	if !plan.Instructions.IsNull() {
-		assistantReq.Instructions = plan.Instructions.ValueString()
+		instructions := plan.Instructions.ValueString()
+		assistantReq.Instructions = &instructions
 	}
 
 	// Process tools if provided
@@ -192,7 +192,7 @@ func (r *AssistantResource) Create(ctx context.Context, req resource.CreateReque
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		assistantReq.Metadata = metadata
+		assistantReq.Metadata = convertToMapStringAny(metadata)
 	}
 
 	tflog.Debug(ctx, "Creating assistant", map[string]interface{}{
@@ -250,7 +250,6 @@ func (r *AssistantResource) Read(ctx context.Context, req resource.ReadRequest, 
 			resp.State.RemoveResource(ctx)
 			return
 		}
-
 		resp.Diagnostics.AddError(
 			"Error Reading Assistant",
 			fmt.Sprintf("Unable to read assistant details: %s", r.client.HandleError(err)),
@@ -259,10 +258,26 @@ func (r *AssistantResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	// Update the state with the latest values
-	state.Name = types.StringValue(assistant.Name)
-	state.Description = types.StringValue(assistant.Description)
+	if assistant.Name != nil {
+		state.Name = types.StringValue(*assistant.Name)
+	} else {
+		state.Name = types.StringNull()
+	}
+
+	if assistant.Description != nil {
+		state.Description = types.StringValue(*assistant.Description)
+	} else {
+		state.Description = types.StringNull()
+	}
+
 	state.Model = types.StringValue(assistant.Model)
-	state.Instructions = types.StringValue(assistant.Instructions)
+
+	if assistant.Instructions != nil {
+		state.Instructions = types.StringValue(*assistant.Instructions)
+	} else {
+		state.Instructions = types.StringNull()
+	}
+
 	state.CreatedAt = types.Int64Value(int64(assistant.CreatedAt))
 
 	// Convert tools
@@ -287,7 +302,17 @@ func (r *AssistantResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	// Convert metadata
 	if assistant.Metadata != nil {
-		metadataMap, diags := types.MapValueFrom(ctx, types.StringType, assistant.Metadata)
+		// Convert from map[string]any to map[string]string
+		stringMetadata := make(map[string]string)
+		for k, v := range assistant.Metadata {
+			if strVal, ok := v.(string); ok {
+				stringMetadata[k] = strVal
+			} else {
+				stringMetadata[k] = fmt.Sprintf("%v", v)
+			}
+		}
+
+		metadataMap, diags := types.MapValueFrom(ctx, types.StringType, stringMetadata)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -331,15 +356,18 @@ func (r *AssistantResource) Update(ctx context.Context, req resource.UpdateReque
 
 	// Set optional parameters
 	if !plan.Name.IsNull() {
-		assistantReq.Name = plan.Name.ValueString()
+		name := plan.Name.ValueString()
+		assistantReq.Name = &name
 	}
 
 	if !plan.Description.IsNull() {
-		assistantReq.Description = plan.Description.ValueString()
+		description := plan.Description.ValueString()
+		assistantReq.Description = &description
 	}
 
 	if !plan.Instructions.IsNull() {
-		assistantReq.Instructions = plan.Instructions.ValueString()
+		instructions := plan.Instructions.ValueString()
+		assistantReq.Instructions = &instructions
 	}
 
 	// Process tools if provided
@@ -371,7 +399,7 @@ func (r *AssistantResource) Update(ctx context.Context, req resource.UpdateReque
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		assistantReq.Metadata = metadata
+		assistantReq.Metadata = convertToMapStringAny(metadata)
 	}
 
 	tflog.Debug(ctx, "Updating assistant", map[string]interface{}{
@@ -424,7 +452,6 @@ func (r *AssistantResource) Delete(ctx context.Context, req resource.DeleteReque
 		if apiErr, ok := err.(*openai.APIError); ok && apiErr.HTTPStatusCode == 404 {
 			return
 		}
-
 		resp.Diagnostics.AddError(
 			"Error Deleting Assistant",
 			fmt.Sprintf("Unable to delete assistant: %s", r.client.HandleError(err)),
@@ -438,8 +465,8 @@ func (r *AssistantResource) ImportState(ctx context.Context, req resource.Import
 }
 
 // Helper function to convert from Terraform tools to OpenAI tools
-func convertToolsToOpenAI(ctx context.Context, toolsAttr types.List) ([]openai.AssistantTool, path.Diagnostics) {
-	var diags path.Diagnostics
+func convertToolsToOpenAI(ctx context.Context, toolsAttr types.List) ([]openai.AssistantTool, diag.Diagnostics) {
+	var diags diag.Diagnostics
 	var tools []AssistantToolModel
 
 	if toolsAttr.IsNull() || toolsAttr.IsUnknown() {
@@ -452,6 +479,7 @@ func convertToolsToOpenAI(ctx context.Context, toolsAttr types.List) ([]openai.A
 	}
 
 	openaiTools := make([]openai.AssistantTool, 0, len(tools))
+
 	for i, tool := range tools {
 		if tool.Type.IsNull() {
 			diags.AddAttributeError(
@@ -483,12 +511,15 @@ func convertToolsToOpenAI(ctx context.Context, toolsAttr types.List) ([]openai.A
 				continue
 			}
 
-			// For simplicity, we pass the function definition as a raw JSON string
-			// A more robust implementation would parse the JSON and build the function structure
+			funcDef := make(map[string]interface{})
+			// For this simplified example, we're storing the function definition as a string
+			// In a real implementation, you would need to parse the JSON string into a proper structure
+			funcDef["description"] = tool.FunctionDefinition.ValueString()
+
 			openaiTools = append(openaiTools, openai.AssistantTool{
 				Type: openai.AssistantToolTypeFunction,
-				Function: openai.FunctionDefinition{
-					Definition: tool.FunctionDefinition.ValueString(),
+				Function: &openai.FunctionDefinition{
+					Description: tool.FunctionDefinition.ValueString(),
 				},
 			})
 		default:
@@ -504,9 +535,8 @@ func convertToolsToOpenAI(ctx context.Context, toolsAttr types.List) ([]openai.A
 }
 
 // Helper function to convert from OpenAI tools to Terraform tools
-func convertOpenAIToolsToTerraform(ctx context.Context, tools []openai.AssistantTool) (types.List, path.Diagnostics) {
-	var diags path.Diagnostics
-
+func convertOpenAIToolsToTerraform(ctx context.Context, tools []openai.AssistantTool) (types.List, diag.Diagnostics) {
+	var diags diag.Diagnostics
 	tfTools := make([]attr.Value, 0, len(tools))
 
 	for _, tool := range tools {
@@ -515,11 +545,17 @@ func convertOpenAIToolsToTerraform(ctx context.Context, tools []openai.Assistant
 		switch tool.Type {
 		case openai.AssistantToolTypeCodeInterpreter:
 			toolMap["type"] = types.StringValue("code_interpreter")
+			toolMap["function_definition"] = types.StringNull()
 		case openai.AssistantToolTypeRetrieval:
 			toolMap["type"] = types.StringValue("retrieval")
+			toolMap["function_definition"] = types.StringNull()
 		case openai.AssistantToolTypeFunction:
 			toolMap["type"] = types.StringValue("function")
-			toolMap["function_definition"] = types.StringValue(tool.Function.Definition)
+			if tool.Function != nil {
+				toolMap["function_definition"] = types.StringValue(tool.Function.Description)
+			} else {
+				toolMap["function_definition"] = types.StringNull()
+			}
 		}
 
 		toolObj, d := types.ObjectValue(
@@ -529,7 +565,6 @@ func convertOpenAIToolsToTerraform(ctx context.Context, tools []openai.Assistant
 			},
 			toolMap,
 		)
-
 		diags.Append(d...)
 		if diags.HasError() {
 			continue
@@ -547,7 +582,16 @@ func convertOpenAIToolsToTerraform(ctx context.Context, tools []openai.Assistant
 		},
 		tfTools,
 	)
-
 	diags.Append(d...)
+
 	return toolsList, diags
+}
+
+// Helper function to convert map[string]string to map[string]interface{}
+func convertToMapStringAny(in map[string]string) map[string]interface{} {
+	result := make(map[string]interface{}, len(in))
+	for k, v := range in {
+		result[k] = v
+	}
+	return result
 }

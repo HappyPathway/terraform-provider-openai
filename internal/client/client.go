@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"context"
+
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	openai "github.com/sashabaranov/go-openai"
 	"golang.org/x/time/rate"
@@ -47,23 +49,22 @@ func NewClient(apiKey, organization, baseURL string, debug bool) (*Client, error
 		},
 	}
 
-	// Configure base client options
-	options := []openai.ClientOption{
-		openai.WithHTTPClient(httpClient),
-	}
+	// Create the base client config
+	config := openai.DefaultConfig(apiKey)
+	config.HTTPClient = httpClient
 
 	// Add organization option if set
 	if organization != "" {
-		options = append(options, openai.WithOrganization(organization))
+		config.OrgID = organization
 	}
 
 	// Add custom base URL if set
 	if baseURL != "" {
-		options = append(options, openai.WithBaseURL(baseURL))
+		config.BaseURL = baseURL
 	}
 
 	// Create the OpenAI client
-	client := openai.NewClientWithOptions(apiKey, options...)
+	client := openai.NewClientWithConfig(config)
 
 	// Create a rate limiter that allows for 60 requests per minute (default OpenAI rate limit)
 	// with a burst of 5 requests
@@ -84,17 +85,14 @@ func (c *Client) LogDebug(msg string, additionalFields ...map[string]interface{}
 	if !c.debug {
 		return
 	}
-
-	ctx := tflog.NewCaller()
+	ctx := context.Background()
 	fields := make(map[string]interface{})
-
 	// Add additional fields if provided
 	if len(additionalFields) > 0 && additionalFields[0] != nil {
 		for k, v := range additionalFields[0] {
 			fields[k] = v
 		}
 	}
-
 	tflog.Debug(ctx, msg, fields)
 }
 
@@ -110,7 +108,6 @@ func (c *Client) HandleError(err error) error {
 		if apiErr.HTTPStatusCode == 429 {
 			return fmt.Errorf("OpenAI API rate limit exceeded: %s. Please retry after a short delay", apiErr.Message)
 		}
-
 		// Format other API errors
 		return fmt.Errorf("OpenAI API error (Type: %s, Code: %s, Status: %d): %s",
 			apiErr.Type, apiErr.Code, apiErr.HTTPStatusCode, apiErr.Message)
@@ -128,7 +125,8 @@ func (c *Client) ExecuteWithRetry(operation func() (interface{}, error)) (interf
 
 	for attempt = 0; attempt < RetryMaxAttempts; attempt++ {
 		// Apply rate limiting - wait for our turn
-		if err := c.rateLimiter.Wait(tflog.NewCaller()); err != nil {
+		ctx := context.Background()
+		if err := c.rateLimiter.Wait(ctx); err != nil {
 			c.LogDebug(fmt.Sprintf("Rate limiter wait failed: %v", err))
 			// Continue anyway
 		}
@@ -143,10 +141,8 @@ func (c *Client) ExecuteWithRetry(operation func() (interface{}, error)) (interf
 
 		// Calculate backoff with exponential increase and jitter
 		backoff := c.calculateBackoff(attempt)
-
 		c.LogDebug(fmt.Sprintf("Retrying after error: %v (attempt %d of %d, waiting %d ms)",
 			err, attempt+1, RetryMaxAttempts, backoff/time.Millisecond))
-
 		time.Sleep(backoff)
 	}
 

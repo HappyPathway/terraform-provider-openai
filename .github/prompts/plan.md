@@ -119,10 +119,11 @@
 
 ## Phase 8: Testing and Validation of Built Binary
 
-- [] Setup a Makefile that's got commands for building, installing the provider locally, and running tests
-- [] Add terraform apply to Makefile, apply every example in the examples directory and make sure they work
+- [x] Setup a Makefile that's got commands for building, installing the provider locally, and running tests
+- [x] Add terraform apply to Makefile, apply every example in the examples directory and make sure they work
 - [] Iterate on code until all tests pass
-- [] Iterate on code until all terraform exampels are able to apply and destroy cleanly
+- [] Iterate on code until all terraform examples are able to apply and destroy cleanly
+- [] release provider
 
 ## Technical Considerations
 

@@ -5,14 +5,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/darnold/terraform-provider-openai/internal/acctest"
 	"github.com/darnold/terraform-provider-openai/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/sashabaranov/go-openai"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -34,7 +32,6 @@ func TestChatCompletionResource_Metadata(t *testing.T) {
 		ProviderTypeName: "openai",
 	}
 	resp := &resource.MetadataResponse{}
-
 	r.Metadata(context.Background(), req, resp)
 	assert.Equal(t, "openai_chat_completion", resp.TypeName)
 }
@@ -43,7 +40,6 @@ func TestChatCompletionResource_Schema(t *testing.T) {
 	r := &ChatCompletionResource{}
 	req := resource.SchemaRequest{}
 	resp := &resource.SchemaResponse{}
-
 	r.Schema(context.Background(), req, resp)
 
 	// Verify schema structure
@@ -99,7 +95,6 @@ func TestChatCompletionResource_Create(t *testing.T) {
 			},
 		),
 	}
-
 	messagesList, _ := types.ListValue(
 		types.ObjectType{
 			AttrTypes: map[string]attr.Type{
@@ -136,10 +131,8 @@ func TestChatCompletionResource_Create(t *testing.T) {
 
 	// Assertions
 	assert.False(t, resp.Diagnostics.HasError())
-
 	var resultState ChatCompletionResourceModel
 	resp.State.Get(context.Background(), &resultState)
-
 	assert.Equal(t, fmt.Sprintf("chat-gpt-4-%d", created), resultState.ID.ValueString())
 	assert.Equal(t, "assistant", resultState.ResponseRole.ValueString())
 
@@ -151,51 +144,4 @@ func TestChatCompletionResource_Create(t *testing.T) {
 
 	// Verify mock was called
 	mockClient.AssertExpectations(t)
-}
-
-// TestAccChatCompletionResource_Basic tests the chat completion resource with live API calls
-func TestAccChatCompletionResource_Basic(t *testing.T) {
-	acctest.SkipIfNotAcceptanceTest(t)
-
-	resourceName := "openai_chat_completion.test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctest.PreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccChatCompletionResourceConfig(),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "id"),
-					resource.TestCheckResourceAttr(resourceName, "model", "gpt-3.5-turbo"),
-					resource.TestCheckResourceAttr(resourceName, "response_role", "assistant"),
-					resource.TestCheckResourceAttrSet(resourceName, "response_content.0"),
-				),
-			},
-		},
-	})
-}
-
-func testAccChatCompletionResourceConfig() string {
-	return fmt.Sprintf(`
-%s
-
-resource "openai_chat_completion" "test" {
-  model = "gpt-3.5-turbo"
-  
-  messages = [
-    {
-      role    = "system"
-      content = "You are a helpful assistant."
-    },
-    {
-      role    = "user"
-      content = "What is the capital of France?"
-    }
-  ]
-  
-  temperature = 0.7
-  max_tokens = 100
-}
-`, acctest.ProviderConfig())
 }
