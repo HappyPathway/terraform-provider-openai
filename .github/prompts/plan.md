@@ -121,7 +121,8 @@
 
 - [x] Setup a Makefile that's got commands for building, installing the provider locally, and running tests
 - [x] Add terraform apply to Makefile, apply every example in the examples directory and make sure they work
-- [] Iterate on code until all tests pass
+- [x] Iterate on code until all tests pass
+  - [x] Fix fine_tune_resource.go to properly handle optional parameters (prompt_loss_weight, classification_n_classes, classification_positive_class)
 - [] Iterate on code until all terraform examples are able to apply and destroy cleanly
 - [] release provider
 

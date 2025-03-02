@@ -183,7 +183,7 @@ func (r *FineTuneResource) Create(ctx context.Context, req resource.CreateReques
 
 	if !plan.Epochs.IsNull() {
 		fineTuneReq.Hyperparameters = &openai.Hyperparameters{
-			NEpochs: int(plan.Epochs.ValueInt64()),
+			Epochs: int(plan.Epochs.ValueInt64()),
 		}
 	}
 
@@ -201,6 +201,36 @@ func (r *FineTuneResource) Create(ctx context.Context, req resource.CreateReques
 		tflog.Warn(ctx, "learning_rate_multiplier parameter is no longer directly supported in the OpenAI API and will be ignored", map[string]interface{}{
 			"learning_rate_multiplier": plan.LearningRateMultiplier.ValueFloat64(),
 		})
+	}
+
+	if !plan.PromptLossWeight.IsNull() {
+		// Note: PromptLossWeight is no longer directly supported in the new API
+		// We'll log a warning but not fail
+		tflog.Warn(ctx, "prompt_loss_weight parameter is no longer directly supported in the OpenAI API and will be ignored", map[string]interface{}{
+			"prompt_loss_weight": plan.PromptLossWeight.ValueFloat64(),
+		})
+	}
+
+	// Handle classification-related parameters
+	if !plan.ComputeClassificationMetrics.IsNull() && plan.ComputeClassificationMetrics.ValueBool() {
+		// Note: Classification metrics are no longer directly supported in the new API
+		// We'll log a warning but not fail
+		tflog.Warn(ctx, "compute_classification_metrics parameter is no longer directly supported in the OpenAI API and will be ignored", map[string]interface{}{
+			"compute_classification_metrics": plan.ComputeClassificationMetrics.ValueBool(),
+		})
+
+		// Log warnings for other classification parameters if they're set
+		if !plan.ClassificationNClasses.IsNull() {
+			tflog.Warn(ctx, "classification_n_classes parameter is no longer directly supported in the OpenAI API and will be ignored", map[string]interface{}{
+				"classification_n_classes": plan.ClassificationNClasses.ValueInt64(),
+			})
+		}
+
+		if !plan.ClassificationPositiveClass.IsNull() {
+			tflog.Warn(ctx, "classification_positive_class parameter is no longer directly supported in the OpenAI API and will be ignored", map[string]interface{}{
+				"classification_positive_class": plan.ClassificationPositiveClass.ValueString(),
+			})
+		}
 	}
 
 	if !plan.Suffix.IsNull() {
