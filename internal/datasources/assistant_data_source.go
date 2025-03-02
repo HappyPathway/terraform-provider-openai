@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"encoding/json"
+
 	"github.com/darnold/terraform-provider-openai/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/sashabaranov/go-openai"
@@ -164,10 +167,22 @@ func (d *AssistantDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	// Map response body to model
 	data.ID = types.StringValue(assistant.ID)
-	data.Name = types.StringValue(assistant.Name)
-	data.Description = types.StringValue(assistant.Description)
+	if assistant.Name != nil {
+		data.Name = types.StringValue(*assistant.Name)
+	} else {
+		data.Name = types.StringNull()
+	}
+	if assistant.Description != nil {
+		data.Description = types.StringValue(*assistant.Description)
+	} else {
+		data.Description = types.StringNull()
+	}
 	data.Model = types.StringValue(assistant.Model)
-	data.Instructions = types.StringValue(assistant.Instructions)
+	if assistant.Instructions != nil {
+		data.Instructions = types.StringValue(*assistant.Instructions)
+	} else {
+		data.Instructions = types.StringNull()
+	}
 	data.CreatedAt = types.Int64Value(int64(assistant.CreatedAt))
 
 	// Convert tools
@@ -205,14 +220,11 @@ func (d *AssistantDataSource) Read(ctx context.Context, req datasource.ReadReque
 }
 
 // Helper function to convert from OpenAI tools to Terraform tools
-func convertOpenAIToolsToTerraform(ctx context.Context, tools []openai.AssistantTool) (types.List, []error) {
-	var diags []error
-
+func convertOpenAIToolsToTerraform(ctx context.Context, tools []openai.AssistantTool) (types.List, diag.Diagnostics) {
+	var diags diag.Diagnostics
 	tfTools := make([]attr.Value, 0, len(tools))
-
 	for _, tool := range tools {
 		toolMap := make(map[string]attr.Value)
-
 		switch tool.Type {
 		case openai.AssistantToolTypeCodeInterpreter:
 			toolMap["type"] = types.StringValue("code_interpreter")
@@ -222,9 +234,20 @@ func convertOpenAIToolsToTerraform(ctx context.Context, tools []openai.Assistant
 			toolMap["function_definition"] = types.StringNull()
 		case openai.AssistantToolTypeFunction:
 			toolMap["type"] = types.StringValue("function")
-			toolMap["function_definition"] = types.StringValue(tool.Function.Definition)
+			if tool.Function != nil {
+				functionJSON, err := json.Marshal(tool.Function)
+				if err != nil {
+					diags.AddError(
+						"Error Converting Function Definition",
+						fmt.Sprintf("Unable to convert function definition to JSON: %s", err),
+					)
+					continue
+				}
+				toolMap["function_definition"] = types.StringValue(string(functionJSON))
+			} else {
+				toolMap["function_definition"] = types.StringNull()
+			}
 		}
-
 		toolObj, err := types.ObjectValue(
 			map[string]attr.Type{
 				"type":                types.StringType,
@@ -232,15 +255,15 @@ func convertOpenAIToolsToTerraform(ctx context.Context, tools []openai.Assistant
 			},
 			toolMap,
 		)
-
 		if err != nil {
-			diags = append(diags, err)
+			diags.AddError(
+				"Error Converting Tool",
+				fmt.Sprintf("Unable to convert tool to Terraform object: %s", err),
+			)
 			continue
 		}
-
 		tfTools = append(tfTools, toolObj)
 	}
-
 	toolsList, err := types.ListValue(
 		types.ObjectType{
 			AttrTypes: map[string]attr.Type{
@@ -250,10 +273,11 @@ func convertOpenAIToolsToTerraform(ctx context.Context, tools []openai.Assistant
 		},
 		tfTools,
 	)
-
 	if err != nil {
-		diags = append(diags, err)
+		diags.AddError(
+			"Error Creating Tools List",
+			fmt.Sprintf("Unable to create tools list: %s", err),
+		)
 	}
-
 	return toolsList, diags
 }

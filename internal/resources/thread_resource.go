@@ -106,7 +106,12 @@ func (r *ThreadResource) Create(ctx context.Context, req resource.CreateRequest,
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		threadReq.Metadata = metadata
+		// Convert metadata to map[string]any
+		metadataAny := make(map[string]any)
+		for k, v := range metadata {
+			metadataAny[k] = v
+		}
+		threadReq.Metadata = metadataAny
 	}
 
 	tflog.Debug(ctx, "Creating thread")
@@ -223,7 +228,12 @@ func (r *ThreadResource) Update(ctx context.Context, req resource.UpdateRequest,
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		threadReq.Metadata = metadata
+		// Convert metadata to map[string]any
+		metadataAny := make(map[string]any)
+		for k, v := range metadata {
+			metadataAny[k] = v
+		}
+		threadReq.Metadata = metadataAny
 	}
 
 	tflog.Debug(ctx, "Updating thread", map[string]interface{}{
@@ -269,7 +279,7 @@ func (r *ThreadResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		"thread_id": threadID,
 	})
 
-	err := r.client.OpenAI.DeleteThread(ctx, threadID)
+	_, err := r.client.OpenAI.DeleteThread(ctx, threadID)
 	if err != nil {
 		// If thread doesn't exist, don't return an error
 		if apiErr, ok := err.(*openai.APIError); ok && apiErr.HTTPStatusCode == 404 {

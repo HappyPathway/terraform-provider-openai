@@ -429,7 +429,9 @@ func (r *MessageResource) Update(ctx context.Context, req resource.UpdateRequest
 	})
 
 	// Update the message
-	message, err := r.client.OpenAI.ModifyMessage(ctx, threadID, messageID, messageReq)
+	message, err := r.client.OpenAI.Messages.Modify(ctx, threadID, messageID, &openai.MessageModifyParams{
+		Metadata: metadataAny,
+	})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Message",
@@ -522,4 +524,20 @@ func (r *MessageResource) waitForRunCompletion(ctx context.Context, threadID, ru
 	}
 
 	return nil, fmt.Errorf("run did not complete within the timeout period")
+}
+
+func (r *MessageResource) waitForRun(ctx context.Context, threadID, runID string) (openai.Run, error) {
+	run, err := r.client.OpenAI.RetrieveRun(ctx, threadID, runID)
+	if err != nil {
+		return openai.Run{}, err
+	}
+	return run, nil
+}
+
+func (r *MessageResource) waitForRunAndSubmitToolOutputs(ctx context.Context, threadID, runID string) (openai.Run, error) {
+	run, err := r.client.OpenAI.RetrieveRun(ctx, threadID, runID)
+	if err != nil {
+		return openai.Run{}, err
+	}
+	return run, nil
 }

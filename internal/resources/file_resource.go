@@ -3,7 +3,6 @@ package resources
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 
 	"github.com/darnold/terraform-provider-openai/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -120,31 +119,18 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	// Read the file contents
-	filePath := plan.FilePath.ValueString()
-	fileBytes, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Reading File",
-			fmt.Sprintf("Unable to read file at path %s: %s", filePath, err),
-		)
-		return
-	}
-
 	// Create file request
-	fileReq := openai.FileRequest{
-		FileName: plan.Filename.ValueString(),
+	file, err := r.client.OpenAI.CreateFile(ctx, openai.FileRequest{
+		FilePath: plan.FilePath.ValueString(),
 		Purpose:  plan.Purpose.ValueString(),
-		Content:  fileBytes, // Use the Content field instead of a separate file parameter
-	}
+	})
 
 	tflog.Debug(ctx, "Creating file", map[string]interface{}{
-		"filename": fileReq.FileName,
-		"purpose":  fileReq.Purpose,
+		"filename": plan.Filename.ValueString(),
+		"purpose":  plan.Purpose.ValueString(),
 	})
 
 	// Upload the file
-	file, err := r.client.OpenAI.CreateFile(ctx, fileReq)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating File",
@@ -249,31 +235,18 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		}
 	}
 
-	// Read the file contents
-	filePath := plan.FilePath.ValueString()
-	fileBytes, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Reading File",
-			fmt.Sprintf("Unable to read file at path %s: %s", filePath, err),
-		)
-		return
-	}
-
 	// Create file request
-	fileReq := openai.FileRequest{
-		FileName: plan.Filename.ValueString(),
+	file, err := r.client.OpenAI.CreateFile(ctx, openai.FileRequest{
+		FilePath: plan.FilePath.ValueString(),
 		Purpose:  plan.Purpose.ValueString(),
-		Content:  fileBytes, // Use the Content field instead of a separate file parameter
-	}
+	})
 
 	tflog.Debug(ctx, "Updating file (recreate)", map[string]interface{}{
-		"filename": fileReq.FileName,
-		"purpose":  fileReq.Purpose,
+		"filename": plan.Filename.ValueString(),
+		"purpose":  plan.Purpose.ValueString(),
 	})
 
 	// Upload the file
-	file, err := r.client.OpenAI.CreateFile(ctx, fileReq)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating File",

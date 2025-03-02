@@ -386,7 +386,7 @@ func convertOpenAIChoicesToTerraform(ctx context.Context, choices []openai.ChatC
 		choiceAttrValues := map[string]attr.Value{
 			"index":         types.Int64Value(int64(choice.Index)),
 			"message":       messageObj,
-			"finish_reason": types.StringValue(choice.FinishReason),
+			"finish_reason": types.StringValue(string(choice.FinishReason)),
 		}
 
 		choiceObj, d := types.ObjectValue(
