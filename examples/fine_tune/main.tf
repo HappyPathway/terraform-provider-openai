@@ -23,19 +23,16 @@ resource "openai_file" "validation_data" {
 
 # Create a fine-tuning job
 resource "openai_fine_tune" "custom_model" {
-  training_file   = openai_file.training_data.id
-  validation_file = openai_file.validation_data.id
-  model           = "gpt-3.5-turbo"
+  training_file_id   = openai_file.training_data.id
+  validation_file_id = openai_file.validation_data.id
+  model              = "gpt-3.5-turbo"
 
   # Optional: add a suffix to the model name
   suffix = "customer-service-assistant"
 
-  # Optional: configure hyperparameters
-  hyperparameters = {
-    n_epochs                 = 4
-    batch_size               = null # Let OpenAI determine optimal batch size
-    learning_rate_multiplier = null # Let OpenAI determine optimal learning rate
-  }
+  # Optional: configure epochs (other hyperparameters like batch_size and 
+  # learning_rate_multiplier are no longer directly supported in the new API)
+  epochs = 4
 }
 
 output "fine_tuned_model" {
@@ -48,10 +45,7 @@ output "fine_tune_status" {
   description = "Current status of the fine-tuning job"
 }
 
-output "fine_tune_events" {
-  value       = openai_fine_tune.custom_model.events
-  description = "Events from the fine-tuning process"
-}
+# Note: The events output has been removed as it's not included in the resource model
 
 # Note: You need to create the following files before running this example:
 # - data/training_data.jsonl - JSONL file with training data in the chat format

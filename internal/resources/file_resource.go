@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"os"
 
 	"github.com/darnold/terraform-provider-openai/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -136,6 +135,7 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 	fileReq := openai.FileRequest{
 		FileName: plan.Filename.ValueString(),
 		Purpose:  plan.Purpose.ValueString(),
+		Content:  fileBytes, // Use the Content field instead of a separate file parameter
 	}
 
 	tflog.Debug(ctx, "Creating file", map[string]interface{}{
@@ -143,40 +143,8 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 		"purpose":  fileReq.Purpose,
 	})
 
-	// Create a temporary file to upload
-	tempFile, err := os.CreateTemp("", "openai-file-upload-*")
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Creating Temporary File",
-			fmt.Sprintf("Unable to create temporary file: %s", err),
-		)
-		return
-	}
-	defer os.Remove(tempFile.Name())
-	defer tempFile.Close()
-
-	// Write the file contents to the temporary file
-	_, err = tempFile.Write(fileBytes)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Writing to Temporary File",
-			fmt.Sprintf("Unable to write to temporary file: %s", err),
-		)
-		return
-	}
-
-	// Reset file pointer to the beginning
-	_, err = tempFile.Seek(0, 0)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Resetting File Pointer",
-			fmt.Sprintf("Unable to reset file pointer: %s", err),
-		)
-		return
-	}
-
 	// Upload the file
-	file, err := r.client.OpenAI.CreateFile(ctx, fileReq, tempFile)
+	file, err := r.client.OpenAI.CreateFile(ctx, fileReq)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating File",
@@ -296,6 +264,7 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	fileReq := openai.FileRequest{
 		FileName: plan.Filename.ValueString(),
 		Purpose:  plan.Purpose.ValueString(),
+		Content:  fileBytes, // Use the Content field instead of a separate file parameter
 	}
 
 	tflog.Debug(ctx, "Updating file (recreate)", map[string]interface{}{
@@ -303,40 +272,8 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		"purpose":  fileReq.Purpose,
 	})
 
-	// Create a temporary file to upload
-	tempFile, err := os.CreateTemp("", "openai-file-upload-*")
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Creating Temporary File",
-			fmt.Sprintf("Unable to create temporary file: %s", err),
-		)
-		return
-	}
-	defer os.Remove(tempFile.Name())
-	defer tempFile.Close()
-
-	// Write the file contents to the temporary file
-	_, err = tempFile.Write(fileBytes)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Writing to Temporary File",
-			fmt.Sprintf("Unable to write to temporary file: %s", err),
-		)
-		return
-	}
-
-	// Reset file pointer to the beginning
-	_, err = tempFile.Seek(0, 0)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Resetting File Pointer",
-			fmt.Sprintf("Unable to reset file pointer: %s", err),
-		)
-		return
-	}
-
 	// Upload the file
-	file, err := r.client.OpenAI.CreateFile(ctx, fileReq, tempFile)
+	file, err := r.client.OpenAI.CreateFile(ctx, fileReq)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating File",

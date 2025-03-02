@@ -99,7 +99,7 @@ func (r *EmbeddingResource) Create(ctx context.Context, req resource.CreateReque
 
 	// Create the embedding request
 	embeddingReq := openai.EmbeddingRequest{
-		Model: plan.Model.ValueString(),
+		Model: openai.EmbeddingModel(plan.Model.ValueString()),
 		Input: plan.Input.ValueString(),
 	}
 
@@ -172,7 +172,7 @@ func (r *EmbeddingResource) Update(ctx context.Context, req resource.UpdateReque
 
 	// Create the embedding request
 	embeddingReq := openai.EmbeddingRequest{
-		Model: plan.Model.ValueString(),
+		Model: openai.EmbeddingModel(plan.Model.ValueString()),
 		Input: plan.Input.ValueString(),
 	}
 

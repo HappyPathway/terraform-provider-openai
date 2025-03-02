@@ -339,7 +339,7 @@ func convertTerraformMessagesToOpenAI(ctx context.Context, messagesList types.Li
 	for i, message := range tfMessages {
 		if message.Role.IsNull() || message.Content.IsNull() {
 			diags.AddAttributeError(
-				path.AtListIndex(i),
+				path.Root("messages").AtListIndex(i),
 				"Invalid Message",
 				"Both role and content must be provided for chat completion messages.",
 			)

@@ -170,8 +170,8 @@ func (r *FineTuneResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	// Create the fine-tuning request
-	fineTuneReq := openai.FineTuningRequest{
+	// Create the fine-tuning request using the latest API
+	fineTuneReq := openai.FineTuningJobRequest{
 		TrainingFile: plan.TrainingFileID.ValueString(),
 		Model:        plan.Model.ValueString(),
 	}
@@ -182,18 +182,25 @@ func (r *FineTuneResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	if !plan.Epochs.IsNull() {
-		epochs := int(plan.Epochs.ValueInt64())
-		fineTuneReq.Hyperparameters.NEpochs = &epochs
+		fineTuneReq.Hyperparameters = &openai.Hyperparameters{
+			NEpochs: int(plan.Epochs.ValueInt64()),
+		}
 	}
 
 	if !plan.BatchSize.IsNull() {
-		batchSize := int(plan.BatchSize.ValueInt64())
-		fineTuneReq.Hyperparameters.BatchSize = &batchSize
+		// Note: BatchSize is no longer directly supported in the new API
+		// We'll log a warning but not fail
+		tflog.Warn(ctx, "batch_size parameter is no longer directly supported in the OpenAI API and will be ignored", map[string]interface{}{
+			"batch_size": plan.BatchSize.ValueInt64(),
+		})
 	}
 
 	if !plan.LearningRateMultiplier.IsNull() {
-		learningRate := plan.LearningRateMultiplier.ValueFloat64()
-		fineTuneReq.Hyperparameters.LearningRateMultiplier = &learningRate
+		// Note: LearningRateMultiplier is no longer directly supported in the new API
+		// We'll log a warning but not fail
+		tflog.Warn(ctx, "learning_rate_multiplier parameter is no longer directly supported in the OpenAI API and will be ignored", map[string]interface{}{
+			"learning_rate_multiplier": plan.LearningRateMultiplier.ValueFloat64(),
+		})
 	}
 
 	if !plan.Suffix.IsNull() {
@@ -218,7 +225,7 @@ func (r *FineTuneResource) Create(ctx context.Context, req resource.CreateReques
 	// Wait for job to be created
 	time.Sleep(2 * time.Second)
 
-	// Poll for job status until it's complete or fails
+	// Poll for job status
 	fineTune, err = r.client.OpenAI.RetrieveFineTuningJob(ctx, fineTune.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(

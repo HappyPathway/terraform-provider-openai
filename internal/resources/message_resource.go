@@ -162,7 +162,7 @@ func (r *MessageResource) Create(ctx context.Context, req resource.CreateRequest
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		messageReq.FileIDs = fileIDs
+		messageReq.FileIds = fileIDs // Changed from FileIDs to FileIds
 	}
 
 	// Process metadata if provided
@@ -173,7 +173,13 @@ func (r *MessageResource) Create(ctx context.Context, req resource.CreateRequest
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		messageReq.Metadata = metadata
+
+		// Convert from map[string]string to map[string]any
+		metadataAny := make(map[string]any)
+		for k, v := range metadata {
+			metadataAny[k] = v
+		}
+		messageReq.Metadata = metadataAny
 	}
 
 	tflog.Debug(ctx, "Creating message", map[string]interface{}{
@@ -338,8 +344,8 @@ func (r *MessageResource) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 
 	// Convert file IDs
-	if len(message.FileIDs) > 0 {
-		fileIDsList, diags := types.ListValueFrom(ctx, types.StringType, message.FileIDs)
+	if len(message.FileIds) > 0 { // Changed from FileIDs to FileIds
+		fileIDsList, diags := types.ListValueFrom(ctx, types.StringType, message.FileIds)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -349,7 +355,17 @@ func (r *MessageResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	// Convert metadata
 	if message.Metadata != nil {
-		metadataMap, diags := types.MapValueFrom(ctx, types.StringType, message.Metadata)
+		// Convert from map[string]any to map[string]string for Terraform state
+		metadataStr := make(map[string]string)
+		for k, v := range message.Metadata {
+			if strValue, ok := v.(string); ok {
+				metadataStr[k] = strValue
+			} else {
+				metadataStr[k] = fmt.Sprintf("%v", v)
+			}
+		}
+
+		metadataMap, diags := types.MapValueFrom(ctx, types.StringType, metadataStr)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -398,7 +414,13 @@ func (r *MessageResource) Update(ctx context.Context, req resource.UpdateRequest
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		messageReq.Metadata = metadata
+
+		// Convert from map[string]string to map[string]any
+		metadataAny := make(map[string]any)
+		for k, v := range metadata {
+			metadataAny[k] = v
+		}
+		messageReq.Metadata = metadataAny
 	}
 
 	tflog.Debug(ctx, "Updating message", map[string]interface{}{

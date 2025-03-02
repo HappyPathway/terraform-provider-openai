@@ -6,6 +6,7 @@ import (
 
 	"github.com/darnold/terraform-provider-openai/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -347,8 +348,8 @@ func (r *ChatCompletionResource) ImportState(ctx context.Context, req resource.I
 }
 
 // Helper function to convert from Terraform messages to OpenAI messages
-func convertMessagesToOpenAI(ctx context.Context, messagesAttr types.List) ([]openai.ChatCompletionMessage, path.Diagnostics) {
-	var diags path.Diagnostics
+func convertMessagesToOpenAI(ctx context.Context, messagesAttr types.List) ([]openai.ChatCompletionMessage, diag.Diagnostics) {
+	var diags diag.Diagnostics
 	var messages []MessageModel
 
 	if messagesAttr.IsNull() || messagesAttr.IsUnknown() {
