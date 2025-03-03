@@ -1,8 +1,7 @@
 terraform {
   required_providers {
     openai = {
-      source  = "darnold/openai"
-      version = "0.1.0"
+      source = "happypathway/openai"
     }
   }
 }

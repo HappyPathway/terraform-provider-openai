@@ -247,13 +247,8 @@ func (r *MessageResource) Create(ctx context.Context, req resource.CreateRequest
 			}
 
 			if completedRun.Status == "completed" {
-				// Get the assistant's response messages
-				listMsgReq := openai.ListMessagesRequest{
-					Limit: 1,      // Just get the last message
-					Order: "desc", // Get most recent first
-				}
-
-				messages, err := r.client.OpenAI.ListMessages(ctx, threadID, &listMsgReq)
+				// Get the assistant's response by retrieving the last message directly
+				lastMessage, err := r.client.OpenAI.RetrieveMessage(ctx, threadID, message.ID)
 				if err != nil {
 					resp.Diagnostics.AddError(
 						"Error Retrieving Assistant Response",
@@ -262,9 +257,9 @@ func (r *MessageResource) Create(ctx context.Context, req resource.CreateRequest
 					return
 				}
 
-				if len(messages.Messages) > 0 && messages.Messages[0].Role == "assistant" && len(messages.Messages[0].Content) > 0 {
-					// Get text content from the first content item
-					responseContent = messages.Messages[0].Content[0].Text.Value
+				// Get message content
+				if lastMessage.Role == "assistant" && len(lastMessage.Content) > 0 {
+					responseContent = lastMessage.Content[0].Text.Value
 				}
 			} else {
 				resp.Diagnostics.AddWarning(
@@ -404,23 +399,41 @@ func (r *MessageResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	// Create the update request
-	messageReq := openai.ModifyMessageRequest{}
+	messageReq := openai.Message{
+		Content: []openai.MessageContent{{
+			Type: "text",
+			Text: &openai.MessageText{
+				Value: plan.Content.ValueString(),
+			},
+		}},
+	}
 
-	// Process metadata if provided
-	if !plan.Metadata.IsNull() {
-		metadata := make(map[string]string)
-		diags := plan.Metadata.ElementsAs(ctx, &metadata, false)
+	// Update file IDs if changed
+	if !plan.FileIDs.IsNull() && !plan.FileIDs.Equal(state.FileIDs) {
+		var fileIDs []string
+		diags := plan.FileIDs.ElementsAs(ctx, &fileIDs, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		messageReq.FileIds = fileIDs
+	}
+
+	// Update metadata if changed
+	if !plan.Metadata.IsNull() && !plan.Metadata.Equal(state.Metadata) {
+		metadataStr := make(map[string]string)
+		diags := plan.Metadata.ElementsAs(ctx, &metadataStr, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 
 		// Convert from map[string]string to map[string]any
-		metadataAny := make(map[string]any)
-		for k, v := range metadata {
-			metadataAny[k] = v
+		metadata := make(map[string]any)
+		for k, v := range metadataStr {
+			metadata[k] = v
 		}
-		messageReq.Metadata = metadataAny
+		messageReq.Metadata = metadata
 	}
 
 	tflog.Debug(ctx, "Updating message", map[string]interface{}{
@@ -428,10 +441,28 @@ func (r *MessageResource) Update(ctx context.Context, req resource.UpdateRequest
 		"message_id": messageID,
 	})
 
+	// Convert the request to string map as required by ModifyMessage
+	modifyRequest := make(map[string]string)
+
+	// Add metadata if present
+	for k, v := range messageReq.Metadata {
+		if strValue, ok := v.(string); ok {
+			modifyRequest[k] = strValue
+		} else {
+			modifyRequest[k] = fmt.Sprintf("%v", v)
+		}
+	}
+
+	// Add content if changed
+	if len(messageReq.Content) > 0 {
+		modifyRequest["content"] = messageReq.Content[0].Text.Value
+	}
+
+	// Don't add file_ids as a comma-separated string as it's not supported by the API
+	// File IDs should be handled through the messageReq structure directly
+
 	// Update the message
-	message, err := r.client.OpenAI.Messages.Modify(ctx, threadID, messageID, &openai.MessageModifyParams{
-		Metadata: metadataAny,
-	})
+	message, err := r.client.OpenAI.ModifyMessage(ctx, threadID, messageID, modifyRequest)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Message",
@@ -440,13 +471,22 @@ func (r *MessageResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	// Keep content from original request since API doesn't return it in modify response
-	plan.Content = state.Content
-	plan.Role = state.Role
+	// Update the state
+	if message.Role != "" {
+		plan.Role = types.StringValue(message.Role)
+	} else {
+		plan.Role = state.Role // Preserve existing role if not returned
+	}
+
+	// Update content if it was returned, otherwise keep the plan value
+	if len(message.Content) > 0 && message.Content[0].Type == "text" {
+		plan.Content = types.StringValue(message.Content[0].Text.Value)
+	}
+
 	plan.ObjectID = types.StringValue(message.ID)
 	plan.CreatedAt = types.Int64Value(int64(message.CreatedAt))
 
-	// Preserve response content
+	// Preserve run-related fields that shouldn't change on update
 	plan.ResponseContent = state.ResponseContent
 	plan.RunID = state.RunID
 
@@ -513,25 +553,25 @@ func (r *MessageResource) waitForRunCompletion(ctx context.Context, threadID, ru
 		// Check if run status is terminal
 		switch run.Status {
 		case "completed", "failed", "cancelled", "expired":
-			return run, nil
+			return &run, nil
 		case "queued", "in_progress", "requires_action":
 			// Continue waiting
 			time.Sleep(pollingInterval)
 		default:
 			// Unknown status
-			return run, fmt.Errorf("run has unknown status: %s", run.Status)
+			return &run, fmt.Errorf("run has unknown status: %s", run.Status)
 		}
 	}
 
 	return nil, fmt.Errorf("run did not complete within the timeout period")
 }
 
-func (r *MessageResource) waitForRun(ctx context.Context, threadID, runID string) (openai.Run, error) {
+func (r *MessageResource) waitForRun(ctx context.Context, threadID, runID string) (*openai.Run, error) {
 	run, err := r.client.OpenAI.RetrieveRun(ctx, threadID, runID)
 	if err != nil {
-		return openai.Run{}, err
+		return nil, err
 	}
-	return run, nil
+	return &run, nil
 }
 
 func (r *MessageResource) waitForRunAndSubmitToolOutputs(ctx context.Context, threadID, runID string) (openai.Run, error) {

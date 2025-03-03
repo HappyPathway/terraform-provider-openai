@@ -1,8 +1,7 @@
 terraform {
   required_providers {
     openai = {
-      source  = "darnold/openai"
-      version = "0.1.0"
+      source = "happypathway/openai"
     }
   }
 }
@@ -16,11 +15,9 @@ resource "openai_assistant" "support_assistant" {
   model        = "gpt-4"
   instructions = "You are a helpful support assistant. Answer user questions clearly and concisely."
 
-  tools = [
-    {
-      type = "code_interpreter"
-    }
-  ]
+  tools {
+    type = "code_interpreter"
+  }
 }
 
 # Create a thread
@@ -36,7 +33,10 @@ resource "openai_thread" "support_thread" {
 resource "openai_message" "initial_inquiry" {
   thread_id = openai_thread.support_thread.id
   role      = "user"
-  content   = "I have a question about my recent invoice. The amount seems higher than usual."
+  content {
+    type = "text"
+    text = "I have a question about my recent invoice. The amount seems higher than usual."
+  }
 
   metadata = {
     source     = "web_chat"
@@ -48,7 +48,10 @@ resource "openai_message" "initial_inquiry" {
 resource "openai_message" "follow_up_details" {
   thread_id = openai_thread.support_thread.id
   role      = "user"
-  content   = "I was charged $59.99 but my usual subscription is $39.99. Can you help me understand why?"
+  content {
+    type = "text"
+    text = "I was charged $59.99 but my usual subscription is $39.99. Can you help me understand why?"
+  }
 
   metadata = {
     source = "web_chat"
@@ -59,11 +62,13 @@ resource "openai_message" "follow_up_details" {
 resource "openai_message" "assistant_response" {
   thread_id = openai_thread.support_thread.id
   role      = "user"
-  content   = "Please analyze the pricing difference and give me possible reasons."
+  content {
+    type = "text"
+    text = "Please analyze the pricing difference and give me possible reasons."
+  }
 
   # This parameter tells the provider to send the message and wait for the assistant's response
-  assistant_id      = openai_assistant.support_assistant.id
-  wait_for_response = true
+  assistant_id = openai_assistant.support_assistant.id
 
   metadata = {
     source = "web_chat"

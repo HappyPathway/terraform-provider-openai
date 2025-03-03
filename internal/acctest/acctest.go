@@ -9,6 +9,7 @@ import (
 	"github.com/darnold/terraform-provider-openai/internal/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
@@ -43,9 +44,8 @@ func SkipIfEmptyEnv(t *testing.T, envVar string) {
 }
 
 // CheckDestroyOpenAIResource is a helper for checking the resource is destroyed
-// It takes a resource type name and a check function that validates the resource no longer exists
-func CheckDestroyOpenAIResource(resourceType string, checkFunc func(s *resource.State) error) resource.TestCheckFunc {
-	return func(s *resource.State) error {
+func CheckDestroyOpenAIResource(resourceType string, checkFunc func(s *terraform.State) error) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
 		for _, rs := range s.RootModule().Resources {
 			if rs.Type != resourceType {
 				continue

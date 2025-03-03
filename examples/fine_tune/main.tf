@@ -1,8 +1,7 @@
 terraform {
   required_providers {
     openai = {
-      source  = "darnold/openai"
-      version = "0.1.0"
+      source = "happypathway/openai"
     }
   }
 }
@@ -12,12 +11,14 @@ provider "openai" {}
 # First, upload the training data file
 resource "openai_file" "training_data" {
   file_path = "${path.module}/data/training_data.jsonl"
+  filename  = "training_data.jsonl"
   purpose   = "fine-tune"
 }
 
 # Optional: Upload validation data
 resource "openai_file" "validation_data" {
   file_path = "${path.module}/data/validation_data.jsonl"
+  filename  = "validation_data.jsonl"
   purpose   = "fine-tune"
 }
 

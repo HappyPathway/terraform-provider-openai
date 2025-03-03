@@ -1,8 +1,7 @@
 terraform {
   required_providers {
     openai = {
-      source  = "darnold/openai"
-      version = "0.1.0"
+      source = "happypathway/openai"
     }
   }
 }
@@ -39,14 +38,13 @@ resource "openai_assistant" "support_assistant" {
     Always be polite and professional in your responses.
   EOT
 
-  tools = [
-    {
-      type = "retrieval" # Enables file search
-    },
-    {
-      type = "code_interpreter" # Enables code and data analysis
-    }
-  ]
+  tools {
+    type = "retrieval" # Enables file search
+  }
+
+  tools {
+    type = "code_interpreter" # Enables code and data analysis
+  }
 
   file_ids = [openai_file.knowledge_base.object_id]
 
@@ -66,12 +64,13 @@ resource "openai_thread" "customer_inquiry" {
 
 # Send a user message to the thread
 resource "openai_message" "initial_question" {
-  thread_id         = openai_thread.customer_inquiry.object_id
-  role              = "user"
-  content           = "What are your company's refund policies?"
-  assistant_id      = openai_assistant.support_assistant.object_id
-  wait_for_response = true
-
+  thread_id = openai_thread.customer_inquiry.object_id
+  role      = "user"
+  content {
+    type = "text"
+    text = "What are your company's refund policies?"
+  }
+  assistant_id = openai_assistant.support_assistant.object_id
   metadata = {
     "source"  = "web"
     "browser" = "chrome"
@@ -88,14 +87,13 @@ resource "openai_embedding" "search_query" {
 resource "openai_chat_completion" "policy_summary" {
   model = data.openai_model.gpt4.model_id
 
-  messages = [
-    {
-      role    = "system"
-      content = "You are a helpful assistant that summarizes information clearly and concisely."
-    },
-    {
-      role    = "user"
-      content = <<-EOT
+  messages {
+    role    = "system"
+    content = "You are a helpful assistant that summarizes information clearly and concisely."
+  }
+  messages {
+    role    = "user"
+    content = <<-EOT
         Based on the following refund policy, provide a brief 2-3 sentence summary:
         
         Our refund policy allows customers to request a full refund within 30 days of purchase. 
@@ -103,8 +101,7 @@ resource "openai_chat_completion" "policy_summary" {
         Digital products that have been downloaded may not be eligible for refunds unless they contain 
         technical defects. Hardware products must be returned in original packaging to qualify for a refund.
       EOT
-    }
-  ]
+  }
 
   temperature = 0.3
   max_tokens  = 150
