@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     openai = {
-      source  = "happypathway/openai"
+      source = "happypathway/openai"
     }
   }
 }
@@ -10,7 +10,8 @@ provider "openai" {}
 
 # Upload a file for the assistant to use
 resource "openai_file" "knowledge_base" {
-  file_path = "${path.module}/data/knowledge_base.pdf"
+  file_path = "${path.module}/data/knowledge_base.json"
+  filename  = "knowledge_base.pdf"
   purpose   = "assistants"
 }
 
@@ -30,15 +31,13 @@ resource "openai_assistant" "customer_support" {
     5. Format responses with markdown when helpful
   EOT
 
-  # Enable tools for the assistant
-  tools = [
-    {
-      type = "retrieval" # Allow access to knowledge base
-    },
-    {
-      type = "code_interpreter" # Allow code execution for data analysis
-    }
-  ]
+  tools {
+    type = "retrieval"
+  }
+  
+  tools {
+    type = "code_interpreter"
+  }
 
   # Attach the knowledge base file
   file_ids = [openai_file.knowledge_base.id]

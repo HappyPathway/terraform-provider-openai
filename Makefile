@@ -4,9 +4,9 @@ default: build
 
 # Binary name
 BINARY=terraform-provider-openai
-VERSION=$(shell git describe --tags --always)
+VERSION=5.0.0
 OS_ARCH=$(shell go env GOOS)_$(shell go env GOARCH)
-PROVIDER_PATH=~/.terraform.d/plugins/registry.terraform.io/darnold/openai/${VERSION}/${OS_ARCH}
+PROVIDER_PATH=~/.terraform.d/plugins/registry.terraform.io/happypathway/openai/${VERSION}/${OS_ARCH}
 
 build:
 	go build -o ${BINARY}

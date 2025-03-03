@@ -37,7 +37,7 @@ type AssistantResourceModel struct {
 	Description  types.String `tfsdk:"description"`
 	Model        types.String `tfsdk:"model"`
 	Instructions types.String `tfsdk:"instructions"`
-	Tools        types.List   `tfsdk:"tools"`
+	Tools        types.Set    `tfsdk:"tools"`
 	FileIDs      types.List   `tfsdk:"file_ids"`
 	Metadata     types.Map    `tfsdk:"metadata"`
 	ObjectID     types.String `tfsdk:"object_id"`
@@ -80,23 +80,7 @@ func (r *AssistantResource) Schema(ctx context.Context, req resource.SchemaReque
 			"instructions": schema.StringAttribute{
 				MarkdownDescription: "Instructions that the assistant uses to guide its responses.",
 				Optional:            true,
-			},
-			"tools": schema.ListNestedAttribute{
-				MarkdownDescription: "A list of tools the assistant can use. Can include 'code_interpreter', 'retrieval', or function tools.",
-				Optional:            true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"type": schema.StringAttribute{
-							MarkdownDescription: "The type of tool. Can be 'code_interpreter', 'retrieval', or 'function'.",
-							Required:            true,
-						},
-						"function_definition": schema.StringAttribute{
-							MarkdownDescription: "JSON string of the function definition when type is 'function'.",
-							Optional:            true,
-						},
-					},
 				},
-			},
 			"file_ids": schema.ListAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "A list of file IDs attached to this assistant. Files can be uploaded using the `openai_file` resource.",
@@ -114,6 +98,23 @@ func (r *AssistantResource) Schema(ctx context.Context, req resource.SchemaReque
 			"created_at": schema.Int64Attribute{
 				MarkdownDescription: "The Unix timestamp (in seconds) for when the assistant was created.",
 				Computed:            true,
+			},
+		},
+		Blocks: map[string]schema.Block{
+			"tools": schema.SetNestedBlock{
+				MarkdownDescription: "A list of tools the assistant can use. Can include 'code_interpreter', 'retrieval', or function tools.",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"type": schema.StringAttribute{
+							MarkdownDescription: "The type of tool. Can be 'code_interpreter', 'retrieval', or 'function'.",
+							Required:            true,
+						},
+						"function_definition": schema.StringAttribute{
+							MarkdownDescription: "JSON string of the function definition when type is 'function'.",
+							Optional:            true,
+						},
+					},
+				},
 			},
 		},
 	}
@@ -147,7 +148,6 @@ func (r *AssistantResource) Create(ctx context.Context, req resource.CreateReque
 		Model: plan.Model.ValueString(),
 	}
 
-	// Set optional parameters
 	if !plan.Name.IsNull() {
 		name := plan.Name.ValueString()
 		assistantReq.Name = &name
@@ -165,39 +165,40 @@ func (r *AssistantResource) Create(ctx context.Context, req resource.CreateReque
 
 	// Process tools if provided
 	if !plan.Tools.IsNull() {
-		tools, toolDiags := convertToolsToOpenAI(ctx, plan.Tools)
-		resp.Diagnostics.Append(toolDiags...)
+		tools, diags := convertToolsToOpenAI(ctx, plan.Tools)
+		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 		assistantReq.Tools = tools
 	}
 
-	// Process file IDs if provided
-	if !plan.FileIDs.IsNull() {
-		var fileIDs []string
-		diags := plan.FileIDs.ElementsAs(ctx, &fileIDs, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		assistantReq.FileIDs = fileIDs
-	}
-
 	// Process metadata if provided
 	if !plan.Metadata.IsNull() {
-		metadata := make(map[string]string)
-		diags := plan.Metadata.ElementsAs(ctx, &metadata, false)
+		var stringMetadata map[string]string
+		diags := plan.Metadata.ElementsAs(ctx, &stringMetadata, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		assistantReq.Metadata = convertToMapStringAny(metadata)
+		// Convert string values to interface{} values
+		metadata := make(map[string]interface{})
+		for k, v := range stringMetadata {
+			metadata[k] = v
+		}
+		assistantReq.Metadata = metadata
 	}
 
-	tflog.Debug(ctx, "Creating assistant", map[string]interface{}{
-		"model": assistantReq.Model,
-	})
+	// Create the assistant first without files
+	assistant, err := r.client.OpenAI.CreateAssistant(ctx, assistantReq)
+	if err != nil {
+		resp.Diagnostics.AddError(
+		metadata := make(map[string]interface{})
+		for k, v := range stringMetadata {
+			metadata[k] = v
+		}
+		assistantReq.Metadata = metadata
+	}
 
 	// Create the assistant
 	assistant, err := r.client.OpenAI.CreateAssistant(ctx, assistantReq)
@@ -209,7 +210,31 @@ func (r *AssistantResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	// Update the state
+	// Process file IDs if provided
+	if !plan.FileIDs.IsNull() {
+		var fileIDs []string
+		diags := plan.FileIDs.ElementsAs(ctx, &fileIDs, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		// Create file requests for each file ID
+		for _, fileID := range fileIDs {
+			fileReq := openai.AssistantFileRequest{
+				FileID: fileID,
+			}
+			_, err := r.client.OpenAI.CreateAssistantFile(ctx, assistant.ID, fileReq)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					"Error Attaching File",
+					fmt.Sprintf("Unable to attach file %s: %s", fileID, r.client.HandleError(err)),
+				)
+				return
+			}
+		}
+	}
+
+	// Update the state with the response
 	plan.ID = types.StringValue(assistant.ID)
 	plan.ObjectID = types.StringValue(assistant.ID)
 	plan.CreatedAt = types.Int64Value(int64(assistant.CreatedAt))
@@ -465,7 +490,7 @@ func (r *AssistantResource) ImportState(ctx context.Context, req resource.Import
 }
 
 // Helper function to convert from Terraform tools to OpenAI tools
-func convertToolsToOpenAI(ctx context.Context, toolsAttr types.List) ([]openai.AssistantTool, diag.Diagnostics) {
+func convertToolsToOpenAI(ctx context.Context, toolsAttr types.Set) ([]openai.AssistantTool, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	var tools []AssistantToolModel
 
@@ -480,10 +505,10 @@ func convertToolsToOpenAI(ctx context.Context, toolsAttr types.List) ([]openai.A
 
 	openaiTools := make([]openai.AssistantTool, 0, len(tools))
 
-	for i, tool := range tools {
+	for _, tool := range tools {
 		if tool.Type.IsNull() {
 			diags.AddAttributeError(
-				path.Root("tools").AtListIndex(i),
+				path.Root("tools"),
 				"Invalid Tool",
 				"Tool must have a type.",
 			)
@@ -504,17 +529,12 @@ func convertToolsToOpenAI(ctx context.Context, toolsAttr types.List) ([]openai.A
 		case "function":
 			if tool.FunctionDefinition.IsNull() {
 				diags.AddAttributeError(
-					path.Root("tools").AtListIndex(i).AtName("function_definition"),
+					path.Root("tools").AtName("function_definition"),
 					"Missing Function Definition",
 					"Function tools must have a function_definition.",
 				)
 				continue
 			}
-
-			funcDef := make(map[string]interface{})
-			// For this simplified example, we're storing the function definition as a string
-			// In a real implementation, you would need to parse the JSON string into a proper structure
-			funcDef["description"] = tool.FunctionDefinition.ValueString()
 
 			openaiTools = append(openaiTools, openai.AssistantTool{
 				Type: openai.AssistantToolTypeFunction,
@@ -524,7 +544,7 @@ func convertToolsToOpenAI(ctx context.Context, toolsAttr types.List) ([]openai.A
 			})
 		default:
 			diags.AddAttributeError(
-				path.Root("tools").AtListIndex(i).AtName("type"),
+				path.Root("tools").AtName("type"),
 				"Invalid Tool Type",
 				fmt.Sprintf("Tool type '%s' is not supported. Must be 'code_interpreter', 'retrieval', or 'function'.", toolType),
 			)
@@ -535,7 +555,7 @@ func convertToolsToOpenAI(ctx context.Context, toolsAttr types.List) ([]openai.A
 }
 
 // Helper function to convert from OpenAI tools to Terraform tools
-func convertOpenAIToolsToTerraform(ctx context.Context, tools []openai.AssistantTool) (types.List, diag.Diagnostics) {
+func convertOpenAIToolsToTerraform(ctx context.Context, tools []openai.AssistantTool) (types.Set, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	tfTools := make([]attr.Value, 0, len(tools))
 
@@ -573,7 +593,7 @@ func convertOpenAIToolsToTerraform(ctx context.Context, tools []openai.Assistant
 		tfTools = append(tfTools, toolObj)
 	}
 
-	toolsList, d := types.ListValue(
+	toolsSet, d := types.SetValue(
 		types.ObjectType{
 			AttrTypes: map[string]attr.Type{
 				"type":                types.StringType,
@@ -584,7 +604,7 @@ func convertOpenAIToolsToTerraform(ctx context.Context, tools []openai.Assistant
 	)
 	diags.Append(d...)
 
-	return toolsList, diags
+	return toolsSet, diags
 }
 
 // Helper function to convert map[string]string to map[string]interface{}

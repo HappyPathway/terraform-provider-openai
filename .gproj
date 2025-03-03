@@ -1,1 +1,44 @@
-{"docs_base_path":"../docs","documentation_sources":[{"name":"docs/provider/aws/data-sources","path":"website/docs/d","repo":"https://github.com/hashicorp/terraform-provider-aws","tag":"main"},{"name":"docs/provider/aws/resources","path":"website/docs/r","repo":"https://github.com/hashicorp/terraform-provider-aws","tag":"main"},{"name":"docs/provider/google/data-sources","path":"website/docs/d","repo":"https://github.com/hashicorp/terraform-provider-google","tag":"main"},{"name":"docs/provider/google/resources","path":"website/docs/r","repo":"https://github.com/hashicorp/terraform-provider-google","tag":"main"},{"name":"docs/provider/openai","path":".","repo":"https://github.com/sashabaranov/go-openai.git","tag":"main"},{"name":"docs/provider/framework","path":".","repo":"https://github.com/hashicorp/terraform-plugin-framework.git","tag":"main"}],"project_name":"terraform-provider-openai","repo_org":"HappyPathway","repositories":[]}
+{
+  "docs_base_path": "../docs",
+  "documentation_sources": [
+    {
+      "name": "docs/provider/aws/data-sources",
+      "path": "website/docs/d",
+      "repo": "https://github.com/hashicorp/terraform-provider-aws",
+      "tag": "main"
+    },
+    {
+      "name": "docs/provider/aws/resources",
+      "path": "website/docs/r",
+      "repo": "https://github.com/hashicorp/terraform-provider-aws",
+      "tag": "main"
+    },
+    {
+      "name": "docs/provider/google/data-sources",
+      "path": "website/docs/d",
+      "repo": "https://github.com/hashicorp/terraform-provider-google",
+      "tag": "main"
+    },
+    {
+      "name": "docs/provider/google/resources",
+      "path": "website/docs/r",
+      "repo": "https://github.com/hashicorp/terraform-provider-google",
+      "tag": "main"
+    },
+    {
+      "name": "docs/provider/openai",
+      "path": "../docs/go-openai/",
+      "repo": "https://github.com/sashabaranov/go-openai.git",
+      "tag": "main"
+    },
+    {
+      "name": "docs/provider/framework",
+      "path": "../docs/terraform-plugin-framework/website/docs/plugin/framework",
+      "repo": "https://github.com/hashicorp/terraform-plugin-framework.git",
+      "tag": "main"
+    }
+  ],
+  "project_name": "terraform-provider-openai",
+  "repo_org": "HappyPathway",
+  "repositories": []
+}

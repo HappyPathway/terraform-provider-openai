@@ -2,8 +2,8 @@
 # Manual edits may be lost in future updates.
 
 provider "registry.terraform.io/happypathway/openai" {
-  version = "1.0.8"
+  version = "5.0.0"
   hashes = [
-    "h1:+KnbnzIc0YHYEZVWy+ZSYnQhw8UL5mzmVA3NgZBDgrw=",
+    "h1:imABDKIjBc13JpE2gWIcVSTbL0cdQS4BUN+7fNwRoH4=",
   ]
 }

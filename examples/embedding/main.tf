@@ -20,17 +20,5 @@ output "embedding_sample" {
   description = "First 5 dimensions of the embedding vector"
 }
 
-# Generate embeddings for multiple texts
-resource "openai_embedding" "multi_text_embedding" {
-  model = "text-embedding-ada-002"
-  input = [
-    "Terraform enables infrastructure as code",
-    "OpenAI provides powerful language models"
-  ]
-}
-
-# Output the dimensions of the first embedding
-output "first_embedding_length" {
-  value       = length(openai_embedding.multi_text_embedding.embedding[0])
-  description = "Number of dimensions in the first embedding vector"
-}
+# Note: the multi-text embedding is not supported in the current version
+# To embed multiple texts, create multiple resources:

@@ -6,6 +6,10 @@ Develop a **Terraform provider for OpenAI** using the **Terraform Plugin Framewo
 
 ---
 
+## Operations And Development
+
+After making changes to Go files, run make build and make install before testing with Terraform commands.
+
 ## Documentation Sources
 
 Use the following documentation sources to guide implementation:
