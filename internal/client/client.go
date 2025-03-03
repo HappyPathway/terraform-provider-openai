@@ -52,6 +52,7 @@ func NewClient(apiKey, organization, baseURL string, debug bool) (*Client, error
 	// Create the base client config
 	config := openai.DefaultConfig(apiKey)
 	config.HTTPClient = httpClient
+	config.AssistantVersion = "v2" // Set the AssistantVersion to v2
 
 	// Add organization option if set
 	if organization != "" {

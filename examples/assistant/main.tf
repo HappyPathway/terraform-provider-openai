@@ -32,7 +32,7 @@ resource "openai_assistant" "customer_support" {
   EOT
 
   tools {
-    type = "retrieval"
+    type = "file_search"
   }
   
   tools {
@@ -40,7 +40,7 @@ resource "openai_assistant" "customer_support" {
   }
 
   # Attach the knowledge base file
-  file_ids = [openai_file.knowledge_base.id]
+  file_path = openai_file.knowledge_base.file_path
 
   # Add metadata for organization
   metadata = {
