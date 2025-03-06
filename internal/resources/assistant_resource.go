@@ -41,6 +41,7 @@ type AssistantResourceModel struct {
 	Instructions types.String `tfsdk:"instructions"`
 	Tools        types.Set    `tfsdk:"tools"`
 	FilePath     types.String `tfsdk:"file_path"`
+	FileIDs      types.Set    `tfsdk:"file_ids"`
 	Metadata     types.Map    `tfsdk:"metadata"`
 	ObjectID     types.String `tfsdk:"object_id"`
 	CreatedAt    types.Int64  `tfsdk:"created_at"`
@@ -86,6 +87,11 @@ func (r *AssistantResource) Schema(ctx context.Context, req resource.SchemaReque
 			"file_path": schema.StringAttribute{
 				MarkdownDescription: "Path to the file to be used by the assistant. Must be accessible by the provider.",
 				Optional:            true,
+			},
+			"file_ids": schema.SetAttribute{
+				MarkdownDescription: "List of file IDs that the assistant should have access to. These can be files uploaded through the openai_file resource.",
+				Optional:            true,
+				ElementType:         types.StringType,
 			},
 			"metadata": schema.MapAttribute{
 				ElementType:         types.StringType,
@@ -146,12 +152,11 @@ func (r *AssistantResource) Create(ctx context.Context, req resource.CreateReque
 
 	// First, upload the file if provided
 	var uploadedFileID string
-	if (!plan.FilePath.IsNull()) {
+	if !plan.FilePath.IsNull() {
 		filePath := plan.FilePath.ValueString()
-		
 		// Create a file upload
 		file, err := os.Open(filePath)
-		if (err != nil) {
+		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error Opening File",
 				fmt.Sprintf("Unable to open file %s: %s", filePath, err),
@@ -160,12 +165,14 @@ func (r *AssistantResource) Create(ctx context.Context, req resource.CreateReque
 		}
 		defer file.Close()
 
+		// Make sure we explicitly set purpose to assistants to ensure v2 headers are added
 		fileReq := openai.FileRequest{
 			FileName: filepath.Base(filePath),
 			FilePath: filePath,
-			Purpose: "assistants",
+			Purpose:  string(openai.PurposeAssistants),
 		}
 
+		// Upload the file which should now use v2 headers due to purpose
 		uploadedFile, err := r.client.OpenAI.CreateFile(ctx, fileReq)
 		if err != nil {
 			resp.Diagnostics.AddError(
@@ -215,7 +222,6 @@ func (r *AssistantResource) Create(ctx context.Context, req resource.CreateReque
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		// Convert string values to interface{} values
 		metadata := make(map[string]interface{})
 		for k, v := range stringMetadata {
 			metadata[k] = v
@@ -223,19 +229,7 @@ func (r *AssistantResource) Create(ctx context.Context, req resource.CreateReque
 		assistantReq.Metadata = metadata
 	}
 
-	// Set up file resources if we have a file
-	if uploadedFileID != "" {
-		assistantReq.ToolResources = &openai.AssistantToolResource{
-			FileSearch: &openai.AssistantToolFileSearch{
-				VectorStoreIDs: []string{uploadedFileID},
-			},
-			CodeInterpreter: &openai.AssistantToolCodeInterpreter{
-				FileIDs: []string{uploadedFileID},
-			},
-		}
-	}
-
-	// Create the assistant with everything included
+	// Create the assistant first without files
 	assistant, err := r.client.OpenAI.CreateAssistant(ctx, assistantReq)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -243,6 +237,34 @@ func (r *AssistantResource) Create(ctx context.Context, req resource.CreateReque
 			fmt.Sprintf("Unable to create assistant: %s", r.client.HandleError(err)),
 		)
 		return
+	}
+
+	// Now attach files if we have any
+	var fileIDs []string
+	if !plan.FileIDs.IsNull() {
+		diags := plan.FileIDs.ElementsAs(ctx, &fileIDs, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	if uploadedFileID != "" {
+		fileIDs = append(fileIDs, uploadedFileID)
+	}
+
+	// Attach each file to the assistant
+	for _, fileID := range fileIDs {
+		_, err := r.client.OpenAI.CreateAssistantFile(ctx, assistant.ID, openai.AssistantFileRequest{
+			FileID: fileID,
+		})
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Attaching File",
+				fmt.Sprintf("Unable to attach file %s to assistant: %s", fileID, r.client.HandleError(err)),
+			)
+			return
+		}
 	}
 
 	// Update the state with the response
@@ -349,6 +371,18 @@ func (r *AssistantResource) Read(ctx context.Context, req resource.ReadRequest, 
 		state.Metadata = metadataMap
 	}
 
+	// Update file IDs in state
+	if len(assistant.FileIDs) > 0 {
+		fileIDsSet, diags := types.SetValueFrom(ctx, types.StringType, assistant.FileIDs)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		state.FileIDs = fileIDsSet
+	} else {
+		state.FileIDs = types.SetNull(types.StringType)
+	}
+
 	// Save into state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -420,12 +454,7 @@ func (r *AssistantResource) Update(ctx context.Context, req resource.UpdateReque
 		assistantReq.Metadata = convertToMapStringAny(metadata)
 	}
 
-	tflog.Debug(ctx, "Updating assistant", map[string]interface{}{
-		"assistant_id": assistantID,
-		"model":        assistantReq.Model,
-	})
-
-	// Update the assistant
+	// Update the assistant first
 	assistant, err := r.client.OpenAI.ModifyAssistant(ctx, assistantID, assistantReq)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -435,47 +464,107 @@ func (r *AssistantResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	// If file_path has changed, handle the file update
-	if !plan.FilePath.Equal(state.FilePath) {
-		// First, upload the new file if provided
-		if !plan.FilePath.IsNull() {
-			filePath := plan.FilePath.ValueString()
-			
-			// Create a file upload
-			file, err := os.Open(filePath)
+	// Handle file changes
+	var newFileIDs []string
+	var oldFileIDs []string
+
+	// Get new file IDs from plan
+	if !plan.FileIDs.IsNull() {
+		diags := plan.FileIDs.ElementsAs(ctx, &newFileIDs, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	// Get old file IDs from state
+	if !state.FileIDs.IsNull() {
+		diags := state.FileIDs.ElementsAs(ctx, &oldFileIDs, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	// Handle new file upload if file_path changed
+	if !plan.FilePath.IsNull() && !plan.FilePath.Equal(state.FilePath) {
+		filePath := plan.FilePath.ValueString()
+		file, err := os.Open(filePath)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Opening File",
+				fmt.Sprintf("Unable to open file %s: %s", filePath, err),
+			)
+			return
+		}
+		defer file.Close()
+
+		// Make sure we explicitly set purpose to assistants to ensure v2 headers are added
+		fileReq := openai.FileRequest{
+			FileName: filepath.Base(filePath),
+			FilePath: filePath,
+			Purpose:  string(openai.PurposeAssistants),
+		}
+
+		uploadedFile, err := r.client.OpenAI.CreateFile(ctx, fileReq)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Uploading File",
+				fmt.Sprintf("Unable to upload file %s: %s", filePath, r.client.HandleError(err)),
+			)
+			return
+		}
+		newFileIDs = append(newFileIDs, uploadedFile.ID)
+	}
+
+	// Get current assistant files
+	assistantFiles, err := r.client.OpenAI.ListAssistantFiles(ctx, assistantID, nil, nil, nil, nil)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Listing Assistant Files",
+			fmt.Sprintf("Unable to list assistant files: %s", r.client.HandleError(err)),
+		)
+		return
+	}
+
+	// Remove files that are no longer needed
+	for _, file := range assistantFiles.AssistantFiles {
+		found := false
+		for _, newID := range newFileIDs {
+			if file.ID == newID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			err := r.client.OpenAI.DeleteAssistantFile(ctx, assistantID, file.ID)
 			if err != nil {
 				resp.Diagnostics.AddError(
-					"Error Opening File",
-					fmt.Sprintf("Unable to open file %s: %s", filePath, err),
+					"Error Removing File",
+					fmt.Sprintf("Unable to remove file %s from assistant: %s", file.ID, r.client.HandleError(err)),
 				)
 				return
 			}
-			defer file.Close()
+		}
+	}
 
-			fileReq := openai.FileRequest{
-				FileName: filepath.Base(filePath),
-				FilePath: filePath,
-				Purpose: "assistants",
+	// Add new files
+	for _, newID := range newFileIDs {
+		found := false
+		for _, file := range assistantFiles.AssistantFiles {
+			if file.ID == newID {
+				found = true
+				break
 			}
-
-			uploadedFile, err := r.client.OpenAI.CreateFile(ctx, fileReq)
+		}
+		if !found {
+			_, err := r.client.OpenAI.CreateAssistantFile(ctx, assistantID, openai.AssistantFileRequest{
+				FileID: newID,
+			})
 			if err != nil {
 				resp.Diagnostics.AddError(
-					"Error Uploading File",
-					fmt.Sprintf("Unable to upload file %s: %s", filePath, r.client.HandleError(err)),
-				)
-				return
-			}
-
-			// Then, attach the file to the assistant
-			fileAttachReq := openai.AssistantFileRequest{
-				FileID: uploadedFile.ID,
-			}
-			_, err = r.client.OpenAI.CreateAssistantFile(ctx, assistant.ID, fileAttachReq)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					"Error Attaching File",
-					fmt.Sprintf("Unable to attach file %s: %s", uploadedFile.ID, r.client.HandleError(err)),
+					"Error Adding File",
+					fmt.Sprintf("Unable to add file %s to assistant: %s", newID, r.client.HandleError(err)),
 				)
 				return
 			}
@@ -511,7 +600,37 @@ func (r *AssistantResource) Delete(ctx context.Context, req resource.DeleteReque
 		"assistant_id": assistantID,
 	})
 
-	_, err := r.client.OpenAI.DeleteAssistant(ctx, assistantID)
+	// First delete all assistant files
+	assistantFiles, err := r.client.OpenAI.ListAssistantFiles(ctx, assistantID, nil, nil, nil, nil)
+	if err != nil {
+		// If assistant doesn't exist, don't return an error
+		if apiErr, ok := err.(*openai.APIError); ok && apiErr.HTTPStatusCode == 404 {
+			return
+		}
+		resp.Diagnostics.AddError(
+			"Error Listing Assistant Files",
+			fmt.Sprintf("Unable to list assistant files: %s", r.client.HandleError(err)),
+		)
+		return
+	}
+
+	for _, file := range assistantFiles.AssistantFiles {
+		err := r.client.OpenAI.DeleteAssistantFile(ctx, assistantID, file.ID)
+		if err != nil {
+			// If file is already gone, continue
+			if apiErr, ok := err.(*openai.APIError); ok && apiErr.HTTPStatusCode == 404 {
+				continue
+			}
+			resp.Diagnostics.AddError(
+				"Error Deleting Assistant File",
+				fmt.Sprintf("Unable to delete file %s from assistant: %s", file.ID, r.client.HandleError(err)),
+			)
+			return
+		}
+	}
+
+	// Then delete the assistant
+	_, err = r.client.OpenAI.DeleteAssistant(ctx, assistantID)
 	if err != nil {
 		// If assistant doesn't exist, don't return an error
 		if apiErr, ok := err.(*openai.APIError); ok && apiErr.HTTPStatusCode == 404 {
@@ -614,7 +733,7 @@ func convertOpenAIToolsToTerraform(ctx context.Context, tools []openai.Assistant
 				toolMap["function_definition"] = types.StringNull()
 			}
 		}
-		
+
 		toolObj, d := types.ObjectValue(
 			map[string]attr.Type{
 				"type":                types.StringType,

@@ -1,0 +1,13 @@
+{
+  "common_issues": [
+    {
+      "issue": "Login Problems",
+      "solution": "Try clearing your browser cache and cookies first"
+    },
+    {
+      "issue": "Installation",
+      "solution": "Follow our step-by-step guide at docs.example.com/install"
+    }
+  ],
+  "contact_hours": "24/7 for premium support, 9-5 EST for standard support"
+}

@@ -46,10 +46,6 @@ type MessageResourceModel struct {
 	RunID           types.String `tfsdk:"run_id"`
 }
 
-func (r *MessageResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_message"
-}
-
 func (r *MessageResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Create and manage messages within OpenAI Assistant threads.",
@@ -580,4 +576,8 @@ func (r *MessageResource) waitForRunAndSubmitToolOutputs(ctx context.Context, th
 		return openai.Run{}, err
 	}
 	return run, nil
+}
+
+func (r *MessageResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_message"
 }

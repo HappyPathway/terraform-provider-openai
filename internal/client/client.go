@@ -1,12 +1,11 @@
 package client
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"net/http"
 	"time"
-
-	"context"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	openai "github.com/sashabaranov/go-openai"
@@ -115,7 +114,7 @@ func (c *Client) HandleError(err error) error {
 	}
 
 	// Generic error
-	return fmt.Errorf("Error communicating with OpenAI API: %s", err.Error())
+	return fmt.Errorf("error communicating with OpenAI API: %s", err.Error())
 }
 
 // ExecuteWithRetry executes a function with retry logic

@@ -1,1 +1,11 @@
-{"refund_policy": "30 days"}
+{
+  "refund_policy": "30 days",
+  "products": [
+    {
+      "name": "Example Product",
+      "description": "This is a sample product for the knowledge base",
+      "features": ["Feature 1", "Feature 2"],
+      "support_info": "Contact support at support@example.com"
+    }
+  ]
+}

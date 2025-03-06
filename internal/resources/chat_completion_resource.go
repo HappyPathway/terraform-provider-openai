@@ -56,23 +56,10 @@ func (r *ChatCompletionResource) Metadata(ctx context.Context, req resource.Meta
 func (r *ChatCompletionResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Generate a chat completion using OpenAI's GPT models.",
-
-		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "Unique identifier for this resource.",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"model": schema.StringAttribute{
-				MarkdownDescription: "ID of the model to use for completion (e.g., 'gpt-4', 'gpt-3.5-turbo').",
-				Required:            true,
-			},
-			"messages": schema.ListNestedAttribute{
+		Blocks: map[string]schema.Block{
+			"messages": schema.ListNestedBlock{
 				MarkdownDescription: "A list of messages comprising the conversation so far.",
-				Required:            true,
-				NestedObject: schema.NestedAttributeObject{
+				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"role": schema.StringAttribute{
 							MarkdownDescription: "The role of the message author. Can be 'system', 'user', or 'assistant'.",
@@ -84,6 +71,19 @@ func (r *ChatCompletionResource) Schema(ctx context.Context, req resource.Schema
 						},
 					},
 				},
+			},
+		},
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Unique identifier for this resource.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"model": schema.StringAttribute{
+				MarkdownDescription: "ID of the model to use for completion (e.g., 'gpt-4', 'gpt-3.5-turbo').",
+				Required:            true,
 			},
 			"temperature": schema.Float64Attribute{
 				MarkdownDescription: "Sampling temperature between 0 and 2. Higher values like 0.8 make output more random, while lower values like 0.2 make it more focused and deterministic.",

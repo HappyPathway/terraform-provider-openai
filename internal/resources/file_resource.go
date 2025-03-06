@@ -120,17 +120,19 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 
 	// Create file request
-	file, err := r.client.OpenAI.CreateFile(ctx, openai.FileRequest{
+	fileReq := openai.FileRequest{
 		FilePath: plan.FilePath.ValueString(),
 		Purpose:  plan.Purpose.ValueString(),
-	})
+	}
 
 	tflog.Debug(ctx, "Creating file", map[string]interface{}{
 		"filename": plan.Filename.ValueString(),
 		"purpose":  plan.Purpose.ValueString(),
 	})
 
-	// Upload the file
+	// Upload the file - no need to set headers manually as they are handled by the transport
+	file, err := r.client.OpenAI.CreateFile(ctx, fileReq)
+
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating File",
@@ -142,6 +144,7 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 	// Update the state
 	plan.ID = types.StringValue(file.ID)
 	plan.ObjectID = types.StringValue(file.ID)
+	plan.Filename = types.StringValue(file.FileName)
 	plan.Bytes = types.Int64Value(int64(file.Bytes))
 	plan.CreatedAt = types.Int64Value(int64(file.CreatedAt))
 	plan.Status = types.StringValue(file.Status)
@@ -203,7 +206,6 @@ func (r *FileResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 }
 
 func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// Files cannot be updated, must be deleted and recreated
 	var plan FileResourceModel
 	var state FileResourceModel
 
@@ -235,7 +237,7 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		}
 	}
 
-	// Create file request
+	// Create file request - no need to set headers manually
 	file, err := r.client.OpenAI.CreateFile(ctx, openai.FileRequest{
 		FilePath: plan.FilePath.ValueString(),
 		Purpose:  plan.Purpose.ValueString(),
@@ -246,7 +248,6 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		"purpose":  plan.Purpose.ValueString(),
 	})
 
-	// Upload the file
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating File",

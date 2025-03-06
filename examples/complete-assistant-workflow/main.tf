@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     openai = {
-      source = "happypathway/openai"
+      source = "HappyPathway/openai"
     }
   }
 }
@@ -15,13 +15,13 @@ provider "openai" {
 }
 
 # Get information about GPT-4 model
-data "openai_model" "gpt4" {
-  model_id = "gpt-4"
+data "openai_model" "gpt3_5_turbo" {
+  model_id = "gpt-3.5-turbo"
 }
 
 # Upload a file to be used with the assistant
 resource "openai_file" "knowledge_base" {
-  filename  = "company_info.json"
+  filename  = "./data/company_info.json"
   file_path = "${path.module}/data/company_info.json"
   purpose   = "assistants"
 }
@@ -30,7 +30,7 @@ resource "openai_file" "knowledge_base" {
 resource "openai_assistant" "support_assistant" {
   name         = "Customer Support Assistant"
   description  = "An assistant that helps with customer inquiries using our knowledge base"
-  model        = data.openai_model.gpt4.model_id
+  model        = data.openai_model.gpt3_5_turbo.model_id
   instructions = <<-EOT
     You are a helpful customer support assistant. 
     Use the company information provided to answer questions accurately.
@@ -39,14 +39,14 @@ resource "openai_assistant" "support_assistant" {
   EOT
 
   tools {
-    type = "retrieval" # Enables file search
+    type = "file_search" # Enables file search
   }
 
   tools {
     type = "code_interpreter" # Enables code and data analysis
   }
 
-  file_ids = [openai_file.knowledge_base.object_id]
+  # file_ids = [openai_file.knowledge_base.object_id]
 
   metadata = {
     "team"    = "customer-support"
@@ -64,13 +64,11 @@ resource "openai_thread" "customer_inquiry" {
 
 # Send a user message to the thread
 resource "openai_message" "initial_question" {
-  thread_id = openai_thread.customer_inquiry.object_id
-  role      = "user"
-  content {
-    type = "text"
-    text = "What are your company's refund policies?"
-  }
-  assistant_id = openai_assistant.support_assistant.object_id
+  thread_id         = openai_thread.customer_inquiry.object_id
+  role              = "user"
+  content           = "What are your company's refund policies?"
+  assistant_id      = openai_assistant.support_assistant.object_id
+  wait_for_response = true # This will make the provider block until we have a response
   metadata = {
     "source"  = "web"
     "browser" = "chrome"
@@ -85,12 +83,15 @@ resource "openai_embedding" "search_query" {
 
 # Generate a completion about the company's refund policies
 resource "openai_chat_completion" "policy_summary" {
-  model = data.openai_model.gpt4.model_id
+  model       = data.openai_model.gpt3_5_turbo.model_id
+  temperature = 0.3
+  max_tokens  = 150
 
   messages {
     role    = "system"
     content = "You are a helpful assistant that summarizes information clearly and concisely."
   }
+
   messages {
     role    = "user"
     content = <<-EOT
@@ -102,14 +103,6 @@ resource "openai_chat_completion" "policy_summary" {
         technical defects. Hardware products must be returned in original packaging to qualify for a refund.
       EOT
   }
-
-  temperature = 0.3
-  max_tokens  = 150
-}
-
-# Output the assistant's response to the customer inquiry
-output "assistant_response" {
-  value = openai_message.initial_question.response_content
 }
 
 # Output the embedding vector (first 5 dimensions only, for readability)

@@ -1,17 +1,23 @@
 terraform {
   required_providers {
     openai = {
-      source = "happypathway/openai"
+      source = "HappyPathway/openai"
     }
   }
 }
 
 provider "openai" {}
 
-# Upload a file for the assistant to use
+# Upload multiple files for the assistant to use
 resource "openai_file" "knowledge_base" {
   file_path = "${path.module}/data/knowledge_base.json"
-  filename  = "knowledge_base.pdf"
+  filename  = "knowledge_base.json"
+  purpose   = "assistants"
+}
+
+resource "openai_file" "additional_info" {
+  file_path = "${path.module}/data/additional_info.json"
+  filename  = "additional_info.json"
   purpose   = "assistants"
 }
 
@@ -25,22 +31,25 @@ resource "openai_assistant" "customer_support" {
     
     Follow these guidelines:
     1. Be friendly and professional
-    2. Answer questions based on the provided knowledge base
+    2. Answer questions based on the provided knowledge bases
     3. If you don't know the answer, say so and offer to escalate to a human agent
-    4. Don't make up information not in the knowledge base
+    4. Don't make up information not in the knowledge bases
     5. Format responses with markdown when helpful
   EOT
 
   tools {
     type = "file_search"
   }
-  
+
   tools {
     type = "code_interpreter"
   }
 
-  # Attach the knowledge base file
-  file_path = openai_file.knowledge_base.file_path
+  # # Attach multiple knowledge base files
+  # file_ids = [
+  #   openai_file.knowledge_base.id,
+  #   openai_file.additional_info.id
+  # ]
 
   # Add metadata for organization
   metadata = {
@@ -55,4 +64,4 @@ output "assistant_id" {
   description = "The ID of the created assistant"
 }
 
-# Note: You need to create a data/knowledge_base.pdf file before running this example
+# Note: You need to create the data/knowledge_base.json and data/additional_info.json files before running this example
