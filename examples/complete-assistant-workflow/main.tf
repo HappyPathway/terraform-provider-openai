@@ -108,11 +108,11 @@ resource "openai_thread" "analysis_session" {
   }
 
   # Configure the thread to use the vector store for semantic search
-  tool_resources = {
-    file_search = {
+  tool_resources {
+    file_search {
       vector_store_ids = [openai_vector_store.analysis_store.id]
     }
-    code_interpreter = {
+    code_interpreter {
       file_ids = [openai_file.code_file.id]
     }
   }
@@ -125,8 +125,8 @@ resource "openai_thread" "analysis_session_file_search" {
   }
 
   # Configure the thread to use the vector store for semantic search
-  tool_resources = {
-    file_search = {
+  tool_resources {
+    file_search {
       vector_store_ids = [openai_vector_store.analysis_store.id]
     }
   }
@@ -139,22 +139,11 @@ resource "openai_thread" "analysis_session_code_interpreter" {
   }
 
   # Configure the thread to use the vector store for semantic search
-  tool_resources = {
-    code_interpreter = {
+  tool_resources {
+    code_interpreter {
       file_ids = [openai_file.code_file.id]
     }
   }
-}
-
-
-resource "openai_thread" "analysis_session_tool_resources" {
-  metadata = {
-    session_type = "data_analysis"
-    project      = "example"
-  }
-
-  # Configure the thread to use the vector store for semantic search
-  tool_resources = {}
 }
 
 # Create a thread without tools
@@ -171,12 +160,10 @@ resource "openai_message" "initial_message" {
   role      = "user"
   content   = "Please analyze the data in data.json using the provided analysis.py script."
 
-  attachments = [
-    {
-      file_id = openai_file.data_file.id
-      tools   = ["code_interpreter"]
-    }
-  ]
+  attachment {
+    file_id = openai_file.data_file.id
+    tools   = ["code_interpreter"]
+  }
 }
 
 # Output vector store information for reference

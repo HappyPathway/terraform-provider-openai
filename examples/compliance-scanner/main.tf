@@ -58,15 +58,15 @@ resource "openai_assistant" "security_scanner" {
     }
   ]
 
-  tool_resources = {
-    code_interpreter = {
+  tool_resources {
+    code_interpreter {
       # Files that the assistant can analyze with code interpreter
       file_ids = [
         openai_file.security_policies.id,
         openai_file.compliance_standards.id
       ]
     }
-    file_search = {
+    file_search {
       # Files available for semantic search during analysis
       vector_store_ids = [
         openai_file.security_policies.id,

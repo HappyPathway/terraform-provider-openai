@@ -33,66 +33,125 @@ type ThreadResource struct {
 
 // ThreadResourceModel describes the resource data model.
 type ThreadResourceModel struct {
-	ID            types.String `tfsdk:"id"`
-	Metadata      types.Map    `tfsdk:"metadata"`
-	ToolResources types.Object `tfsdk:"tool_resources"`
-	CreatedAt     types.Int64  `tfsdk:"created_at"`
+	ID            types.String         `tfsdk:"id"`
+	Metadata      types.Map            `tfsdk:"metadata"`
+	CreatedAt     types.Int64          `tfsdk:"created_at"`
+	Object        types.String         `tfsdk:"object"`
+	Tools         types.List           `tfsdk:"tools"`
+	ToolResources types.Object         `tfsdk:"tool_resources"`
+	Messages      []ThreadMessageModel `tfsdk:"messages"`
 }
 
-func (r *ThreadResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_thread"
+type ThreadMessageModel struct {
+	Role     types.String `tfsdk:"role"`
+	Content  types.String `tfsdk:"content"`
+	FileIDs  types.List   `tfsdk:"file_ids"`
+	Metadata types.Map    `tfsdk:"metadata"`
 }
 
+type ThreadToolResourcesModel struct {
+	CodeInterpreter *ThreadToolResourcesCodeInterpreterModel `tfsdk:"code_interpreter"`
+	FileSearch      *ThreadToolResourcesFileSearchModel      `tfsdk:"file_search"`
+}
+
+type ThreadToolResourcesCodeInterpreterModel struct {
+	FileIDs types.Set `tfsdk:"file_ids"`
+}
+
+type ThreadToolResourcesFileSearchModel struct {
+	VectorStoreIDs []string `tfsdk:"vector_store_ids"`
+}
+
+// Schema returns the schema for this resource.
 func (r *ThreadResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Create and manage conversation threads for OpenAI Assistants.",
+		MarkdownDescription: "Creates and manages OpenAI Threads, which are conversation contexts that collect and organize messages between users and assistants.",
+
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Unique identifier for this resource.",
+				MarkdownDescription: "The unique identifier of the thread.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"metadata": schema.MapAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Metadata in key-value pairs to attach to the thread.",
 				Optional:            true,
+				MarkdownDescription: "A map of key-value pairs that can be used to store additional information about the thread.",
 			},
 			"created_at": schema.Int64Attribute{
-				MarkdownDescription: "The Unix timestamp (in seconds) for when the thread was created.",
 				Computed:            true,
+				MarkdownDescription: "The Unix timestamp (in seconds) for when the thread was created.",
 			},
-			"tool_resources": schema.SingleNestedAttribute{
-				MarkdownDescription: "Resources available to the tools used in the thread.",
+			"object": schema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "The object type, always \"thread\".",
+			},
+			"tools": schema.ListAttribute{
+				ElementType:         types.StringType,
 				Optional:            true,
-				Attributes: map[string]schema.Attribute{
-					"code_interpreter": schema.SingleNestedAttribute{
-						MarkdownDescription: "Code interpreter tool resources",
-						Optional:            true,
+				MarkdownDescription: "A list of tools enabled for this thread. Valid values are: code_interpreter and file_search.",
+			},
+		},
+		Blocks: map[string]schema.Block{
+			"tool_resources": schema.SingleNestedBlock{
+				MarkdownDescription: "Resources made available to the thread's tools.",
+				Blocks: map[string]schema.Block{
+					"code_interpreter": schema.SingleNestedBlock{
+						MarkdownDescription: "Resources for the code interpreter tool.",
 						Attributes: map[string]schema.Attribute{
-							"file_ids": schema.ListAttribute{
+							"file_ids": schema.SetAttribute{
+								MarkdownDescription: "File IDs that the code interpreter can use.",
 								ElementType:         types.StringType,
-								MarkdownDescription: "List of file IDs to use with code interpreter",
 								Optional:            true,
 							},
 						},
 					},
-					"file_search": schema.SingleNestedAttribute{
-						MarkdownDescription: "File search tool resources",
-						Optional:            true,
+					"file_search": schema.SingleNestedBlock{
+						MarkdownDescription: "Resources for the file search tool.",
 						Attributes: map[string]schema.Attribute{
 							"vector_store_ids": schema.ListAttribute{
+								MarkdownDescription: "Vector store IDs available to the file search tool.",
 								ElementType:         types.StringType,
-								MarkdownDescription: "List of vector store IDs to use with file search",
 								Optional:            true,
 							},
 						},
 					},
 				},
 			},
+			"messages": schema.ListNestedBlock{
+				MarkdownDescription: "Initial messages for the thread.",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"role": schema.StringAttribute{
+							MarkdownDescription: "The role of the entity creating the message. Must be either \"user\" or \"assistant\".",
+							Required:            true,
+						},
+						"content": schema.StringAttribute{
+							MarkdownDescription: "The content of the message.",
+							Required:            true,
+						},
+						"file_ids": schema.ListAttribute{
+							ElementType:         types.StringType,
+							Optional:            true,
+							DeprecationMessage:  "The file_ids attribute is deprecated in v2 of the Assistants API. Use message attachments instead.",
+							MarkdownDescription: "DEPRECATED: A list of file IDs to attach to the message.",
+						},
+						"metadata": schema.MapAttribute{
+							ElementType:         types.StringType,
+							Optional:            true,
+							MarkdownDescription: "A map of key-value pairs that can be used to store additional information about the message.",
+						},
+					},
+				},
+			},
 		},
 	}
+}
+
+func (r *ThreadResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_thread"
 }
 
 func (r *ThreadResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -478,10 +537,21 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 		return types.ObjectNull(attrTypes), diags
 	}
 
-	// Build the object value
-	attrs := make(map[string]attr.Value)
+	// Build the object value starting with empty objects for both tools
+	attrs := map[string]attr.Value{
+		"code_interpreter": types.ObjectNull(map[string]attr.Type{
+			"file_ids": types.ListType{
+				ElemType: types.StringType,
+			},
+		}),
+		"file_search": types.ObjectNull(map[string]attr.Type{
+			"vector_store_ids": types.ListType{
+				ElemType: types.StringType,
+			},
+		}),
+	}
 
-	// Only include code_interpreter if it exists in the API response
+	// Update code_interpreter if present in response
 	if toolResources.CodeInterpreter != nil {
 		fileIDsVal, d := types.ListValueFrom(ctx, types.StringType, toolResources.CodeInterpreter.FileIDs)
 		diags.Append(d...)
@@ -489,7 +559,7 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 			return types.ObjectNull(attrTypes), diags
 		}
 
-		codeInterpreterVal, d := types.ObjectValue(
+		attrs["code_interpreter"], d = types.ObjectValue(
 			map[string]attr.Type{
 				"file_ids": types.ListType{
 					ElemType: types.StringType,
@@ -503,10 +573,9 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 		if diags.HasError() {
 			return types.ObjectNull(attrTypes), diags
 		}
-		attrs["code_interpreter"] = codeInterpreterVal
 	}
 
-	// Only include file_search if it exists in the API response
+	// Update file_search if present in response
 	if toolResources.FileSearch != nil {
 		vectorStoreIDsVal, d := types.ListValueFrom(ctx, types.StringType, toolResources.FileSearch.VectorStoreIDs)
 		diags.Append(d...)
@@ -514,7 +583,7 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 			return types.ObjectNull(attrTypes), diags
 		}
 
-		fileSearchVal, d := types.ObjectValue(
+		attrs["file_search"], d = types.ObjectValue(
 			map[string]attr.Type{
 				"vector_store_ids": types.ListType{
 					ElemType: types.StringType,
@@ -528,12 +597,6 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 		if diags.HasError() {
 			return types.ObjectNull(attrTypes), diags
 		}
-		attrs["file_search"] = fileSearchVal
-	}
-
-	// If no attributes were added, return null
-	if len(attrs) == 0 {
-		return types.ObjectNull(attrTypes), diags
 	}
 
 	// Create and return the final object
@@ -556,17 +619,17 @@ func convertTerraformToolResourcesToOpenAIRequest(ctx context.Context, toolResou
 
 	result := &openai.ToolResourcesRequest{}
 
-	// Handle code_interpreter
-	if codeInterpreter, ok := val["code_interpreter"].(types.Object); ok && !codeInterpreter.IsNull() && !codeInterpreter.IsUnknown() {
-		attrs := codeInterpreter.Attributes()
-		if attrs != nil {
-			if fileIDs, ok := attrs["file_ids"].(types.List); ok && !fileIDs.IsNull() && !fileIDs.IsUnknown() {
-				var ids []string
-				diags.Append(fileIDs.ElementsAs(ctx, &ids, false)...)
-				if diags.HasError() {
-					return nil, diags
-				}
-				if len(ids) > 0 {
+	// Handle code_interpreter if present
+	if codeInterpreterVal, ok := val["code_interpreter"]; ok {
+		if codeInterpreterObj, ok := codeInterpreterVal.(types.Object); ok && !codeInterpreterObj.IsNull() && !codeInterpreterObj.IsUnknown() {
+			attrs := codeInterpreterObj.Attributes()
+			if attrs != nil {
+				if fileIDs, ok := attrs["file_ids"].(types.List); ok && !fileIDs.IsNull() && !fileIDs.IsUnknown() {
+					var ids []string
+					diags.Append(fileIDs.ElementsAs(ctx, &ids, false)...)
+					if diags.HasError() {
+						return nil, diags
+					}
 					result.CodeInterpreter = &openai.CodeInterpreterToolResourcesRequest{
 						FileIDs: ids,
 					}
@@ -575,17 +638,17 @@ func convertTerraformToolResourcesToOpenAIRequest(ctx context.Context, toolResou
 		}
 	}
 
-	// Handle file_search
-	if fileSearch, ok := val["file_search"].(types.Object); ok && !fileSearch.IsNull() && !fileSearch.IsUnknown() {
-		attrs := fileSearch.Attributes()
-		if attrs != nil {
-			if vectorStoreIDs, ok := attrs["vector_store_ids"].(types.List); ok && !vectorStoreIDs.IsNull() && !vectorStoreIDs.IsUnknown() {
-				var ids []string
-				diags.Append(vectorStoreIDs.ElementsAs(ctx, &ids, false)...)
-				if diags.HasError() {
-					return nil, diags
-				}
-				if len(ids) > 0 {
+	// Handle file_search if present
+	if fileSearchVal, ok := val["file_search"]; ok {
+		if fileSearchObj, ok := fileSearchVal.(types.Object); ok && !fileSearchObj.IsNull() && !fileSearchObj.IsUnknown() {
+			attrs := fileSearchObj.Attributes()
+			if attrs != nil {
+				if vectorStoreIDs, ok := attrs["vector_store_ids"].(types.List); ok && !vectorStoreIDs.IsNull() && !vectorStoreIDs.IsUnknown() {
+					var ids []string
+					diags.Append(vectorStoreIDs.ElementsAs(ctx, &ids, false)...)
+					if diags.HasError() {
+						return nil, diags
+					}
 					result.FileSearch = &openai.FileSearchToolResourcesRequest{
 						VectorStoreIDs: ids,
 					}

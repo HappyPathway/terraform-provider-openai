@@ -7,12 +7,14 @@ import (
 	"time"
 
 	"github.com/darnold/terraform-provider-openai/internal/client"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/sashabaranov/go-openai"
 )
@@ -41,7 +43,7 @@ type MessageResourceModel struct {
 	CreatedAt   types.Int64  `tfsdk:"created_at"`
 	Object      types.String `tfsdk:"object"`
 	AssistantID types.String `tfsdk:"assistant_id"`
-	Attachments types.List   `tfsdk:"attachments"`
+	Attachments types.List   `tfsdk:"attachment"`
 }
 
 // AttachmentModel represents a file attachment in a message
@@ -50,13 +52,14 @@ type AttachmentModel struct {
 	Tools  types.List   `tfsdk:"tools"`
 }
 
-func (r *MessageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *MessageResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Creates and manages individual messages within OpenAI Threads. Messages are the building blocks of conversations between users and assistants.",
+		MarkdownDescription: "Create and manage OpenAI Messages within Threads.",
+
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "The OpenAI-assigned ID for this message.",
 				Computed:            true,
+				MarkdownDescription: "Unique identifier for this message.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -74,40 +77,43 @@ func (r *MessageResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Required:            true,
 			},
 			"file_ids": schema.ListAttribute{
-				MarkdownDescription: "A list of file IDs to attach to the message. These files must already be uploaded with purpose \"assistants\".",
 				ElementType:         types.StringType,
+				MarkdownDescription: "DEPRECATED: Use attachments instead. A list of file IDs to attach to the message.",
 				Optional:            true,
+				DeprecationMessage:  "The file_ids attribute is deprecated in v2 of the Assistants API. Use attachments instead.",
 			},
 			"metadata": schema.MapAttribute{
-				MarkdownDescription: "Set of key-value pairs that can be used to store additional information about the message.",
 				ElementType:         types.StringType,
+				MarkdownDescription: "A map of key-value pairs that can be used to store additional information about the message.",
 				Optional:            true,
 			},
 			"created_at": schema.Int64Attribute{
-				MarkdownDescription: "The Unix timestamp (in seconds) for when the message was created.",
 				Computed:            true,
+				MarkdownDescription: "The timestamp when the message was created.",
 			},
 			"object": schema.StringAttribute{
-				MarkdownDescription: "The object type, always \"thread.message\".",
 				Computed:            true,
+				MarkdownDescription: "The object type, always \"thread.message\".",
 			},
 			"assistant_id": schema.StringAttribute{
-				MarkdownDescription: "If applicable, the ID of the assistant that created the message.",
 				Computed:            true,
-			},
-			"attachments": schema.ListNestedAttribute{
-				MarkdownDescription: "A list of files to attach to the message with their associated tools.",
 				Optional:            true,
-				NestedObject: schema.NestedAttributeObject{
+				MarkdownDescription: "If applicable, the ID of the assistant that created the message.",
+			},
+		},
+		Blocks: map[string]schema.Block{
+			"attachment": schema.ListNestedBlock{
+				MarkdownDescription: "File attachments with their associated tools. Each attachment automatically adds the file to the thread's tool_resources.",
+				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"file_id": schema.StringAttribute{
-							Required:            true,
 							MarkdownDescription: "The ID of the file to attach.",
+							Required:            true,
 						},
 						"tools": schema.ListAttribute{
-							Required:            true,
 							ElementType:         types.StringType,
-							MarkdownDescription: "List of tools that can use this file. Can be \"code_interpreter\" and/or \"retrieve\".",
+							MarkdownDescription: "The list of tools to use with this attachment. Valid values are: code_interpreter, file_search.",
+							Required:            true,
 						},
 					},
 				},
@@ -135,7 +141,6 @@ func (r *MessageResource) Configure(ctx context.Context, req resource.ConfigureR
 
 func (r *MessageResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan MessageResourceModel
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -147,7 +152,7 @@ func (r *MessageResource) Create(ctx context.Context, req resource.CreateRequest
 		Content: plan.Content.ValueString(),
 	}
 
-	// Add file IDs if specified
+	// Add file IDs if specified (deprecated but maintained for backwards compatibility)
 	if !plan.FileIDs.IsNull() {
 		var fileIDs []string
 		resp.Diagnostics.Append(plan.FileIDs.ElementsAs(ctx, &fileIDs, false)...)
@@ -164,7 +169,6 @@ func (r *MessageResource) Create(ctx context.Context, req resource.CreateRequest
 		if resp.Diagnostics.HasError() {
 			return
 		}
-
 		// Convert from map[string]string to map[string]interface{}
 		metadataAny := make(map[string]interface{})
 		for k, v := range metadata {
@@ -173,35 +177,48 @@ func (r *MessageResource) Create(ctx context.Context, req resource.CreateRequest
 		messageReq.Metadata = metadataAny
 	}
 
-	// Add attachments if specified
+	// Add attachments if specified in tool_resources
 	if !plan.Attachments.IsNull() {
-		var attachments []AttachmentModel
-		resp.Diagnostics.Append(plan.Attachments.ElementsAs(ctx, &attachments, false)...)
+		var attachments []types.Object
+		diags := plan.Attachments.ElementsAs(ctx, &attachments, false)
+		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 
-		messageAttachments := make([]openai.ThreadAttachment, 0, len(attachments))
-		for _, attachment := range attachments {
-			var tools []string
-			resp.Diagnostics.Append(attachment.Tools.ElementsAs(ctx, &tools, false)...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
+		if len(attachments) > 0 {
+			messageAttachments := make([]openai.ThreadAttachment, 0, len(attachments))
+			for _, attachment := range attachments {
+				var attachmentModel struct {
+					FileID types.String `tfsdk:"file_id"`
+					Tools  types.List   `tfsdk:"tools"`
+				}
+				diags := attachment.As(ctx, &attachmentModel, basetypes.ObjectAsOptions{})
+				resp.Diagnostics.Append(diags...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
 
-			threadTools := make([]openai.ThreadAttachmentTool, 0, len(tools))
-			for _, tool := range tools {
-				threadTools = append(threadTools, openai.ThreadAttachmentTool{
-					Type: tool,
+				var toolsList []string
+				diags = attachmentModel.Tools.ElementsAs(ctx, &toolsList, false)
+				resp.Diagnostics.Append(diags...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				// Convert string tools to ThreadAttachmentTool
+				tools := make([]openai.ThreadAttachmentTool, len(toolsList))
+				for i, tool := range toolsList {
+					tools[i] = openai.ThreadAttachmentTool{Type: tool}
+				}
+
+				messageAttachments = append(messageAttachments, openai.ThreadAttachment{
+					FileID: attachmentModel.FileID.ValueString(),
+					Tools:  tools,
 				})
 			}
-
-			messageAttachments = append(messageAttachments, openai.ThreadAttachment{
-				FileID: attachment.FileID.ValueString(),
-				Tools:  threadTools,
-			})
+			messageReq.Attachments = messageAttachments
 		}
-		messageReq.Attachments = messageAttachments
 	}
 
 	// Create the message
@@ -218,6 +235,95 @@ func (r *MessageResource) Create(ctx context.Context, req resource.CreateRequest
 	plan.ID = types.StringValue(message.ID)
 	plan.Object = types.StringValue(message.Object)
 	plan.CreatedAt = types.Int64Value(int64(message.CreatedAt))
+
+	// Handle file IDs in response
+	if len(message.FileIds) > 0 {
+		fileIDsList, diags := types.ListValueFrom(ctx, types.StringType, message.FileIds)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		plan.FileIDs = fileIDsList
+	} else {
+		plan.FileIDs = types.ListNull(types.StringType)
+	}
+
+	// Ensure content is properly set from response
+	if len(message.Content) > 0 {
+		for _, content := range message.Content {
+			if content.Type == "text" {
+				plan.Content = types.StringValue(content.Text.Value)
+				break
+			}
+		}
+	}
+
+	// We'll need to get the message file attachments separately since they're not included in the message response
+	if len(message.FileIds) > 0 {
+		files, err := r.client.OpenAI.ListMessageFiles(ctx, plan.ThreadID.ValueString(), message.ID)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Reading Message Files",
+				fmt.Sprintf("Unable to read message files: %s", r.client.HandleError(err)),
+			)
+			return
+		}
+		if len(files.MessageFiles) > 0 {
+			attachments := make([]types.Object, 0, len(files.MessageFiles))
+			for _, file := range files.MessageFiles {
+				// For each file, we need to get its tools from the original request
+				var tools []string
+				for _, attachment := range messageReq.Attachments {
+					if attachment.FileID == file.ID {
+						// Convert ThreadAttachmentTool back to strings
+						tools = make([]string, len(attachment.Tools))
+						for i, tool := range attachment.Tools {
+							tools[i] = tool.Type
+						}
+						break
+					}
+				}
+				toolsList, diags := types.ListValueFrom(ctx, types.StringType, tools)
+				resp.Diagnostics.Append(diags...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				attachmentObj, diags := types.ObjectValue(
+					map[string]attr.Type{
+						"file_id": types.StringType,
+						"tools":   types.ListType{ElemType: types.StringType},
+					},
+					map[string]attr.Value{
+						"file_id": types.StringValue(file.ID),
+						"tools":   toolsList,
+					},
+				)
+				resp.Diagnostics.Append(diags...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				attachments = append(attachments, attachmentObj)
+			}
+			attachmentsList, diags := types.ListValueFrom(ctx, types.ObjectType{
+				AttrTypes: map[string]attr.Type{
+					"file_id": types.StringType,
+					"tools":   types.ListType{ElemType: types.StringType},
+				},
+			}, attachments)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			plan.Attachments = attachmentsList
+		} else {
+			plan.Attachments = types.ListNull(types.ObjectType{
+				AttrTypes: map[string]attr.Type{
+					"file_id": types.StringType,
+					"tools":   types.ListType{ElemType: types.StringType},
+				},
+			})
+		}
+	}
 
 	// Ensure assistant_id is always set, even if null
 	if message.AssistantID != nil {
@@ -319,6 +425,101 @@ func (r *MessageResource) Read(ctx context.Context, req resource.ReadRequest, re
 		state.Metadata = types.MapNull(types.StringType)
 	}
 
+	// Handle attachments by retrieving message files
+	files, err := r.client.OpenAI.ListMessageFiles(ctx, threadID, messageID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Reading Message Files",
+			fmt.Sprintf("Unable to read message files: %s", r.client.HandleError(err)),
+		)
+		return
+	}
+
+	if len(files.MessageFiles) > 0 {
+		attachments := make([]types.Object, 0, len(files.MessageFiles))
+		for _, file := range files.MessageFiles {
+			// Note: The API doesn't return tool information for files, so we'll preserve
+			// the tools from the current state if the file ID matches
+			var tools []string
+			if !state.Attachments.IsNull() {
+				var stateAttachments []types.Object
+				diags := state.Attachments.ElementsAs(ctx, &stateAttachments, false)
+				resp.Diagnostics.Append(diags...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				for _, stateAttachment := range stateAttachments {
+					var attachmentModel struct {
+						FileID types.String `tfsdk:"file_id"`
+						Tools  types.List   `tfsdk:"tools"`
+					}
+					diags := stateAttachment.As(ctx, &attachmentModel, basetypes.ObjectAsOptions{})
+					resp.Diagnostics.Append(diags...)
+					if resp.Diagnostics.HasError() {
+						return
+					}
+
+					if attachmentModel.FileID.ValueString() == file.ID {
+						diags = attachmentModel.Tools.ElementsAs(ctx, &tools, false)
+						resp.Diagnostics.Append(diags...)
+						if resp.Diagnostics.HasError() {
+							return
+						}
+						break
+					}
+				}
+			}
+
+			// If we couldn't find tools in the state, use an empty list
+			if tools == nil {
+				tools = []string{}
+			}
+
+			toolsList, diags := types.ListValueFrom(ctx, types.StringType, tools)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+
+			attachmentObj, diags := types.ObjectValue(
+				map[string]attr.Type{
+					"file_id": types.StringType,
+					"tools":   types.ListType{ElemType: types.StringType},
+				},
+				map[string]attr.Value{
+					"file_id": types.StringValue(file.ID),
+					"tools":   toolsList,
+				},
+			)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+
+			attachments = append(attachments, attachmentObj)
+		}
+
+		attachmentsList, diags := types.ListValueFrom(ctx, types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"file_id": types.StringType,
+				"tools":   types.ListType{ElemType: types.StringType},
+			},
+		}, attachments)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		state.Attachments = attachmentsList
+	} else {
+		state.Attachments = types.ListNull(types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"file_id": types.StringType,
+				"tools":   types.ListType{ElemType: types.StringType},
+			},
+		})
+	}
+
 	// Save state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -349,29 +550,8 @@ func (r *MessageResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	// Create the update request
-	messageReq := openai.Message{
-		Content: []openai.MessageContent{{
-			Type: "text",
-			Text: &openai.MessageText{
-				Value: plan.Content.ValueString(),
-			},
-		}},
-	}
-
-	// Update file IDs if changed
-	if !plan.FileIDs.IsNull() && !plan.FileIDs.Equal(state.FileIDs) {
-		var fileIDs []string
-		diags := plan.FileIDs.ElementsAs(ctx, &fileIDs, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		messageReq.FileIds = fileIDs
-	}
-
-	// Update metadata if changed
-	if !plan.Metadata.IsNull() && !plan.Metadata.Equal(state.Metadata) {
+	// The v2 API only allows updating metadata
+	if !plan.Metadata.Equal(state.Metadata) {
 		metadataStr := make(map[string]string)
 		diags := plan.Metadata.ElementsAs(ctx, &metadataStr, false)
 		resp.Diagnostics.Append(diags...)
@@ -379,70 +559,54 @@ func (r *MessageResource) Update(ctx context.Context, req resource.UpdateRequest
 			return
 		}
 
-		// Convert from map[string]string to map[string]interface{}
-		metadata := make(map[string]interface{})
+		// Convert metadata to the format expected by ModifyMessage
+		modifyRequest := make(map[string]string)
 		for k, v := range metadataStr {
-			metadata[k] = v
+			modifyRequest[k] = v
 		}
-		messageReq.Metadata = metadata
-	}
 
-	tflog.Debug(ctx, "Updating message", map[string]interface{}{
-		"thread_id":  threadID,
-		"message_id": messageID,
-	})
+		// Update the message
+		message, err := r.client.OpenAI.ModifyMessage(ctx, threadID, messageID, modifyRequest)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Updating Message",
+				fmt.Sprintf("Unable to update message metadata: %s", r.client.HandleError(err)),
+			)
+			return
+		}
 
-	// Convert the request to string map as required by ModifyMessage
-	modifyRequest := make(map[string]string)
-
-	// Add metadata if present
-	for k, v := range messageReq.Metadata {
-		if strValue, ok := v.(string); ok {
-			modifyRequest[k] = strValue
+		// Update state from response
+		plan.Object = types.StringValue(message.Object)
+		plan.CreatedAt = types.Int64Value(int64(message.CreatedAt))
+		if message.Role != "" {
+			plan.Role = types.StringValue(message.Role)
+		}
+		if len(message.Content) > 0 {
+			for _, content := range message.Content {
+				if content.Type == "text" {
+					plan.Content = types.StringValue(content.Text.Value)
+					break
+				}
+			}
+		}
+		if message.AssistantID != nil {
+			plan.AssistantID = types.StringValue(*message.AssistantID)
 		} else {
-			modifyRequest[k] = fmt.Sprintf("%v", v)
+			plan.AssistantID = types.StringNull()
+		}
+	} else {
+		// If only content changed, we can't update it - messages are immutable except for metadata
+		if !plan.Content.Equal(state.Content) {
+			resp.Diagnostics.AddError(
+				"Cannot Update Message Content",
+				"Message content cannot be modified after creation. Only metadata can be updated.",
+			)
+			return
 		}
 	}
 
-	// Add content if changed
-	if len(messageReq.Content) > 0 {
-		modifyRequest["content"] = messageReq.Content[0].Text.Value
-	}
-
-	// Don't add file_ids as a comma-separated string as it's not supported by the API
-	// File IDs should be handled through the messageReq structure directly
-
-	// Update the message
-	message, err := r.client.OpenAI.ModifyMessage(ctx, threadID, messageID, modifyRequest)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Updating Message",
-			fmt.Sprintf("Unable to update message: %s", r.client.HandleError(err)),
-		)
-		return
-	}
-
-	// Update the state
-	if message.Role != "" {
-		plan.Role = types.StringValue(message.Role)
-	} else {
-		plan.Role = state.Role // Preserve existing role if not returned
-	}
-
-	// Update content if it was returned, otherwise keep the plan value
-	if len(message.Content) > 0 && message.Content[0].Type == "text" {
-		plan.Content = types.StringValue(message.Content[0].Text.Value)
-	}
-
-	plan.Object = types.StringValue(message.Object)
-	plan.CreatedAt = types.Int64Value(int64(message.CreatedAt))
-
-	// Save into state
-	diags = resp.State.Set(ctx, plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	// Save updated state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 func (r *MessageResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

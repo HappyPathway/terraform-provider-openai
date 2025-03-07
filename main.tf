@@ -19,3 +19,15 @@ resource "openai_thread" "analysis_session_no_tools" {
     project      = "example"
   }
 }
+
+# Create a message in the thread
+resource "openai_message" "initial_message" {
+  thread_id = openai_thread.analysis_session.id
+  role      = "user"
+  content   = "Please analyze the data in data.json using the provided analysis.py script."
+
+  attachment {
+    file_id = openai_file.data_file.id
+    tools   = ["code_interpreter"]
+  }
+}

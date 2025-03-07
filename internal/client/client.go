@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -21,6 +22,13 @@ const (
 	RetryMaxBackoffMs = 30000
 )
 
+// Config holds the configuration for the OpenAI client
+type Config struct {
+	APIKey       string
+	BaseURL      string
+	Organization string
+}
+
 // Client wraps an OpenAI API client for use with the Terraform provider
 type Client struct {
 	OpenAI      *openai.Client
@@ -29,55 +37,50 @@ type Client struct {
 	baseURL     string
 	debug       bool
 	rateLimiter *rate.Limiter
+	config      Config
 }
 
 // NewClient creates a new OpenAI API client
-func NewClient(apiKey, organization, baseURL string, debug bool) (*Client, error) {
-	if apiKey == "" {
-		return nil, fmt.Errorf("API key must not be empty")
+func NewClient(ctx context.Context, config Config) (*Client, error) {
+	client := &Client{
+		config: config,
 	}
 
-	// Configure HTTP client with reasonable defaults
-	httpClient := &http.Client{
-		Timeout: time.Second * 60,
-		Transport: &http.Transport{
-			MaxIdleConns:        10,
-			MaxIdleConnsPerHost: 5,
-			MaxConnsPerHost:     10,
-			IdleConnTimeout:     90 * time.Second,
+	// Configure OpenAI client
+	openaiConfig := openai.DefaultConfig(config.APIKey)
+	if config.BaseURL != "" {
+		openaiConfig.BaseURL = config.BaseURL
+	}
+	if config.Organization != "" {
+		openaiConfig.OrgID = config.Organization
+	}
+
+	// Set the Assistants API version to v2
+	openaiConfig.BaseURL = strings.TrimSuffix(openaiConfig.BaseURL, "/")
+	openaiConfig.HTTPClient = &http.Client{
+		Transport: &headerTransport{
+			base: http.DefaultTransport,
+			headers: map[string]string{
+				"OpenAI-Beta": "assistants=v2",
+			},
 		},
 	}
 
-	// Create the base client config
-	config := openai.DefaultConfig(apiKey)
-	config.HTTPClient = httpClient
-	config.AssistantVersion = "v2" // Set the AssistantVersion to v2
+	client.OpenAI = openai.NewClientWithConfig(openaiConfig)
+	return client, nil
+}
 
-	// Add organization option if set
-	if organization != "" {
-		config.OrgID = organization
+// headerTransport adds custom headers to requests
+type headerTransport struct {
+	base    http.RoundTripper
+	headers map[string]string
+}
+
+func (t *headerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	for k, v := range t.headers {
+		req.Header.Add(k, v)
 	}
-
-	// Add custom base URL if set
-	if baseURL != "" {
-		config.BaseURL = baseURL
-	}
-
-	// Create the OpenAI client
-	client := openai.NewClientWithConfig(config)
-
-	// Create a rate limiter that allows for 60 requests per minute (default OpenAI rate limit)
-	// with a burst of 5 requests
-	rateLimiter := rate.NewLimiter(rate.Limit(1), 5)
-
-	return &Client{
-		OpenAI:      client,
-		httpClient:  httpClient,
-		apiKey:      apiKey,
-		baseURL:     baseURL,
-		debug:       debug,
-		rateLimiter: rateLimiter,
-	}, nil
+	return t.base.RoundTrip(req)
 }
 
 // LogDebug outputs debug messages if debug mode is enabled

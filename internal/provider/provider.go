@@ -8,12 +8,10 @@ import (
 	"github.com/darnold/terraform-provider-openai/internal/datasources"
 	"github.com/darnold/terraform-provider-openai/internal/resources"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // Ensure the implementation satisfies the expected interfaces
@@ -25,6 +23,7 @@ var (
 type OpenAIProvider struct {
 	// version is set to the provider version on release.
 	version string
+	client  *client.Client
 }
 
 // OpenAIProviderModel describes the provider data model.
@@ -78,69 +77,57 @@ func (p *OpenAIProvider) Schema(_ context.Context, _ provider.SchemaRequest, res
 
 // Configure prepares a OpenAI API client for data sources and resources.
 func (p *OpenAIProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	tflog.Info(ctx, "Configuring OpenAI client")
-
 	var config OpenAIProviderModel
-	diags := req.Config.Get(ctx, &config)
-	resp.Diagnostics.Append(diags...)
+
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Default values to environment variables, but override with Terraform configuration if set
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	organization := os.Getenv("OPENAI_ORGANIZATION")
-	baseURL := os.Getenv("OPENAI_BASE_URL")
-	enableDebug := false
-
-	if !config.APIKey.IsNull() {
-		apiKey = config.APIKey.ValueString()
-	}
-
-	if !config.Organization.IsNull() {
-		organization = config.Organization.ValueString()
-	}
-
-	if !config.BaseURL.IsNull() {
-		baseURL = config.BaseURL.ValueString()
-	}
-
-	if !config.EnableDebugLogging.IsNull() {
-		enableDebug = config.EnableDebugLogging.ValueBool()
-	}
-
-	// Validate required configuration
-	if apiKey == "" {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("api_key"),
-			"Missing OpenAI API Key",
-			"The provider cannot create the OpenAI API client as there is a missing or empty value for the OpenAI API Key. "+
-				"Set the api_key value in the configuration or use the OPENAI_API_KEY environment variable. "+
-				"If either is already set, ensure the value is not empty.",
+	if config.APIKey.IsUnknown() {
+		resp.Diagnostics.AddWarning(
+			"Unable to create client",
+			"Cannot use unknown value as API key",
 		)
 		return
 	}
 
-	// Create a new OpenAI client using the configuration values
-	openaiClient, err := client.NewClient(apiKey, organization, baseURL, enableDebug)
+	if config.APIKey.IsNull() {
+		apiKey := os.Getenv("OPENAI_API_KEY")
+		if apiKey == "" {
+			resp.Diagnostics.AddError(
+				"Missing API Key Configuration",
+				"While configuring the provider, the API key was not found. "+
+					"Either set the api_key argument in the provider configuration, "+
+					"or set the OPENAI_API_KEY environment variable.",
+			)
+			return
+		}
+		config.APIKey = types.StringValue(apiKey)
+	}
+
+	// Initialize client configuration
+	clientConfig := client.Config{
+		APIKey:       config.APIKey.ValueString(),
+		BaseURL:      config.BaseURL.ValueString(),
+		Organization: config.Organization.ValueString(),
+	}
+
+	// Create new OpenAI client
+	c, err := client.NewClient(ctx, clientConfig)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create OpenAI API Client",
-			"An error occurred when creating the OpenAI API client: "+
-				err.Error(),
+			"An unexpected error occurred when creating the OpenAI API client. "+
+				"If the error is not clear, please contact the provider developers.\n\n"+
+				"OpenAI Client Error: "+err.Error(),
 		)
 		return
 	}
 
-	if enableDebug {
-		tflog.Debug(ctx, "Enabling debug logging for OpenAI provider")
-	}
-
-	// Make the client available during DataSource and Resource Configure methods
-	resp.DataSourceData = openaiClient
-	resp.ResourceData = openaiClient
-
-	tflog.Info(ctx, "Configured OpenAI client", map[string]any{"success": true})
+	p.client = c
+	resp.DataSourceData = c
+	resp.ResourceData = c
 }
 
 // DataSources defines the data sources implemented in the provider.

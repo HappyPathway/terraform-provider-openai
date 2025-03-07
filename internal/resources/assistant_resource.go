@@ -58,7 +58,7 @@ type AssistantToolResourcesCodeInterpreterModel struct {
 }
 
 type AssistantToolResourcesFileSearchModel struct {
-	VectorStoreIDs []string `tfsdk:"vector_store_ids"`
+	VectorStoreIDs types.Set `tfsdk:"vector_store_ids"`
 }
 
 func (r *AssistantResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -86,7 +86,7 @@ func (r *AssistantResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 					"file_search": schema.SingleNestedBlock{
 						MarkdownDescription: "Resources for the file search tool.",
 						Attributes: map[string]schema.Attribute{
-							"vector_store_ids": schema.ListAttribute{
+							"vector_store_ids": schema.SetAttribute{
 								MarkdownDescription: "Vector store IDs for the file search tool.",
 								ElementType:         types.StringType,
 								Optional:            true,
@@ -173,18 +173,18 @@ func (r *AssistantResource) Create(ctx context.Context, req resource.CreateReque
 		assistantReq.Name = &name
 	}
 
-	if !plan.Description.IsNull() {
+	if (!plan.Description.IsNull()) {
 		description := plan.Description.ValueString()
 		assistantReq.Description = &description
 	}
 
-	if !plan.Instructions.IsNull() {
+	if (!plan.Instructions.IsNull()) {
 		instructions := plan.Instructions.ValueString()
 		assistantReq.Instructions = &instructions
 	}
 
 	// Process tools if provided
-	if !plan.Tools.IsNull() {
+	if (!plan.Tools.IsNull()) {
 		var toolStrings []string
 		diags = plan.Tools.ElementsAs(ctx, &toolStrings, false)
 		resp.Diagnostics.Append(diags...)
@@ -201,7 +201,7 @@ func (r *AssistantResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	// Process metadata if provided
-	if !plan.Metadata.IsNull() {
+	if (!plan.Metadata.IsNull()) {
 		metadata := make(map[string]string)
 		diags := plan.Metadata.ElementsAs(ctx, &metadata, false)
 		resp.Diagnostics.Append(diags...)
@@ -212,7 +212,7 @@ func (r *AssistantResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	// Handle tool_resources if provided
-	if plan.ToolResources != nil {
+	if (plan.ToolResources != nil) {
 		toolResources, diags := convertToolResourcesToOpenAI(ctx, plan.ToolResources)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -608,10 +608,19 @@ func convertToolResourcesToOpenAI(ctx context.Context, toolResourcesAttr *Assist
 	toolResources := &openai.AssistantToolResource{}
 
 	// Only include file_search if it has vector store IDs
-	if toolResourcesAttr.FileSearch != nil && len(toolResourcesAttr.FileSearch.VectorStoreIDs) > 0 {
+	if toolResourcesAttr.FileSearch != nil && !toolResourcesAttr.FileSearch.VectorStoreIDs.IsNull() {
 		hasResources = true
+		var vectorStoreIDs []string
+		diags.Append(toolResourcesAttr.FileSearch.VectorStoreIDs.ElementsAs(ctx, &vectorStoreIDs, false)...)
+		if diags.HasError() {
+			return nil, diags
+		}
+
+		// Sort vector store IDs for consistency
+		sort.Strings(vectorStoreIDs)
+
 		toolResources.FileSearch = &openai.AssistantToolFileSearch{
-			VectorStoreIDs: toolResourcesAttr.FileSearch.VectorStoreIDs,
+			VectorStoreIDs: vectorStoreIDs,
 		}
 	}
 
@@ -632,7 +641,7 @@ func convertToolResourcesToOpenAI(ctx context.Context, toolResourcesAttr *Assist
 		}
 	}
 
-	if !hasResources {
+	if (!hasResources) {
 		return nil, diags
 	}
 
@@ -653,8 +662,19 @@ func convertOpenAIToolResourcesToTerraform(ctx context.Context, toolResources *o
 	// Only convert file_search if it has vector store IDs
 	if toolResources.FileSearch != nil && len(toolResources.FileSearch.VectorStoreIDs) > 0 {
 		hasResources = true
+		// Sort vector store IDs for consistency
+		sortedVectorStoreIDs := make([]string, len(toolResources.FileSearch.VectorStoreIDs))
+		copy(sortedVectorStoreIDs, toolResources.FileSearch.VectorStoreIDs)
+		sort.Strings(sortedVectorStoreIDs)
+
+		vectorStoreIDSet, d := types.SetValueFrom(ctx, types.StringType, sortedVectorStoreIDs)
+		diags.Append(d...)
+		if diags.HasError() {
+			return nil, diags
+		}
+
 		tfToolResources.FileSearch = &AssistantToolResourcesFileSearchModel{
-			VectorStoreIDs: toolResources.FileSearch.VectorStoreIDs,
+			VectorStoreIDs: vectorStoreIDSet,
 		}
 	}
 
