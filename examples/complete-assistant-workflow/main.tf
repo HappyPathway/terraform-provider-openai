@@ -41,7 +41,8 @@ resource "openai_vector_store" "analysis_store" {
 
   # Optional: Configure expiration
   expires_after {
-    days = 90
+    days   = 90
+    anchor = "last_active_at" # This will make it expire 90 days after last use
   }
 }
 

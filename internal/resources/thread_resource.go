@@ -485,7 +485,7 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 	// Build the object value
 	attrs := make(map[string]attr.Value)
 
-	// Handle code_interpreter
+	// Only include code_interpreter if it exists in the API response
 	if toolResources.CodeInterpreter != nil {
 		fileIDsVal, d := types.ListValueFrom(ctx, types.StringType, toolResources.CodeInterpreter.FileIDs)
 		diags.Append(d...)
@@ -508,32 +508,9 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 			return types.ObjectNull(attrTypes), diags
 		}
 		attrs["code_interpreter"] = codeInterpreterVal
-	} else {
-		// Set empty code_interpreter with empty file_ids list if not present
-		emptyFileIDs, d := types.ListValueFrom(ctx, types.StringType, []string{})
-		diags.Append(d...)
-		if diags.HasError() {
-			return types.ObjectNull(attrTypes), diags
-		}
-
-		emptyCodeInterpreter, d := types.ObjectValue(
-			map[string]attr.Type{
-				"file_ids": types.ListType{
-					ElemType: types.StringType,
-				},
-			},
-			map[string]attr.Value{
-				"file_ids": emptyFileIDs,
-			},
-		)
-		diags.Append(d...)
-		if diags.HasError() {
-			return types.ObjectNull(attrTypes), diags
-		}
-		attrs["code_interpreter"] = emptyCodeInterpreter
 	}
 
-	// Handle file_search
+	// Only include file_search if it exists in the API response
 	if toolResources.FileSearch != nil {
 		vectorStoreIDsVal, d := types.ListValueFrom(ctx, types.StringType, toolResources.FileSearch.VectorStoreIDs)
 		diags.Append(d...)
@@ -556,29 +533,11 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 			return types.ObjectNull(attrTypes), diags
 		}
 		attrs["file_search"] = fileSearchVal
-	} else {
-		// Set empty file_search with empty vector_store_ids list if not present
-		emptyVectorStoreIDs, d := types.ListValueFrom(ctx, types.StringType, []string{})
-		diags.Append(d...)
-		if diags.HasError() {
-			return types.ObjectNull(attrTypes), diags
-		}
+	}
 
-		emptyFileSearch, d := types.ObjectValue(
-			map[string]attr.Type{
-				"vector_store_ids": types.ListType{
-					ElemType: types.StringType,
-				},
-			},
-			map[string]attr.Value{
-				"vector_store_ids": emptyVectorStoreIDs,
-			},
-		)
-		diags.Append(d...)
-		if diags.HasError() {
-			return types.ObjectNull(attrTypes), diags
-		}
-		attrs["file_search"] = emptyFileSearch
+	// If no tool resources were present, return null
+	if len(attrs) == 0 {
+		return types.ObjectNull(attrTypes), diags
 	}
 
 	// Create and return the final object

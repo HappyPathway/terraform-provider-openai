@@ -40,7 +40,7 @@ type VectorStoreResourceModel struct {
 		Days   types.Int64  `tfsdk:"days"`
 		Anchor types.String `tfsdk:"anchor"`
 	} `tfsdk:"expires_after"`
-	Metadata types.Map `tfsdk:"metadata"`
+	Metadata map[string]string `tfsdk:"metadata"`
 }
 
 func (r *VectorStoreResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -132,12 +132,8 @@ func (r *VectorStoreResource) Create(ctx context.Context, req resource.CreateReq
 
 	// Convert metadata to map[string]interface{}
 	metadata := make(map[string]interface{})
-	if !plan.Metadata.IsNull() && !plan.Metadata.IsUnknown() {
-		diags = plan.Metadata.ElementsAs(ctx, &metadata, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+	for k, v := range plan.Metadata {
+		metadata[k] = v
 	}
 
 	// Build the request
@@ -149,10 +145,8 @@ func (r *VectorStoreResource) Create(ctx context.Context, req resource.CreateReq
 	// Add expiration if configured
 	if plan.ExpiresAfter != nil {
 		createReq.ExpiresAfter = &openai.VectorStoreExpires{
-			Days: int(plan.ExpiresAfter.Days.ValueInt64()),
-		}
-		if !plan.ExpiresAfter.Anchor.IsNull() {
-			createReq.ExpiresAfter.Anchor = plan.ExpiresAfter.Anchor.ValueString()
+			Days:   int(plan.ExpiresAfter.Days.ValueInt64()),
+			Anchor: "last_active_at", // Always set this as it's required by the API
 		}
 	}
 
@@ -224,12 +218,8 @@ func (r *VectorStoreResource) Update(ctx context.Context, req resource.UpdateReq
 
 	// Convert metadata to map[string]interface{}
 	metadata := make(map[string]interface{})
-	if !plan.Metadata.IsNull() && !plan.Metadata.IsUnknown() {
-		diags = plan.Metadata.ElementsAs(ctx, &metadata, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+	for k, v := range plan.Metadata {
+		metadata[k] = v
 	}
 
 	// Build the request
@@ -241,10 +231,8 @@ func (r *VectorStoreResource) Update(ctx context.Context, req resource.UpdateReq
 	// Add expiration if configured
 	if plan.ExpiresAfter != nil {
 		updateReq.ExpiresAfter = &openai.VectorStoreExpires{
-			Days: int(plan.ExpiresAfter.Days.ValueInt64()),
-		}
-		if !plan.ExpiresAfter.Anchor.IsNull() {
-			updateReq.ExpiresAfter.Anchor = plan.ExpiresAfter.Anchor.ValueString()
+			Days:   int(plan.ExpiresAfter.Days.ValueInt64()),
+			Anchor: "last_active_at", // Always set this as it's required by the API
 		}
 	}
 
