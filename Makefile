@@ -32,7 +32,7 @@ examples: install
 	@echo "Running examples..."
 	@for dir in $(shell ls -d examples/*/); do \
 		echo "Applying examples in $$dir"; \
-		cd $$dir && rm -rf .terraform* && terraform init && terraform apply -auto-approve && terraform destroy -auto-approve; \
+		cd $$dir && rm terraform.tfstate* && rm -rf .terraform* && terraform init && terraform apply -auto-approve && terraform destroy -auto-approve; \
 		if [ $$? -ne 0 ]; then \
 			echo "Error applying example in $$dir"; \
 			exit 1; \

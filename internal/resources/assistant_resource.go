@@ -3,11 +3,8 @@ package resources
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/darnold/terraform-provider-openai/internal/client"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -34,94 +31,108 @@ type AssistantResource struct {
 
 // AssistantResourceModel describes the resource data model.
 type AssistantResourceModel struct {
-	ID           types.String `tfsdk:"id"`
-	Name         types.String `tfsdk:"name"`
-	Description  types.String `tfsdk:"description"`
-	Model        types.String `tfsdk:"model"`
-	Instructions types.String `tfsdk:"instructions"`
-	Tools        types.Set    `tfsdk:"tools"`
-	FilePath     types.String `tfsdk:"file_path"`
-	FileIDs      types.Set    `tfsdk:"file_ids"`
-	Metadata     types.Map    `tfsdk:"metadata"`
-	ObjectID     types.String `tfsdk:"object_id"`
-	CreatedAt    types.Int64  `tfsdk:"created_at"`
+	ID            types.String                 `tfsdk:"id"`
+	Name          types.String                 `tfsdk:"name"`
+	Description   types.String                 `tfsdk:"description"`
+	Model         types.String                 `tfsdk:"model"`
+	Instructions  types.String                 `tfsdk:"instructions"`
+	Tools         types.List                   `tfsdk:"tools"`
+	ToolResources *AssistantToolResourcesModel `tfsdk:"tool_resources"`
+	Metadata      types.Map                    `tfsdk:"metadata"`
+	CreatedAt     types.Int64                  `tfsdk:"created_at"`
 }
 
-// AssistantToolModel represents a tool configuration for an assistant.
 type AssistantToolModel struct {
-	Type               types.String `tfsdk:"type"`
-	FunctionDefinition types.String `tfsdk:"function_definition"`
+	Type     types.String `tfsdk:"type"`
+	Function types.String `tfsdk:"function"`
 }
 
-func (r *AssistantResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+type AssistantToolResourcesModel struct {
+	CodeInterpreter *AssistantToolResourcesCodeInterpreterModel `tfsdk:"code_interpreter"`
+	FileSearch      *AssistantToolResourcesFileSearchModel      `tfsdk:"file_search"`
+}
+
+type AssistantToolResourcesCodeInterpreterModel struct {
+	FileIDs []string `tfsdk:"file_ids"`
+}
+
+type AssistantToolResourcesFileSearchModel struct {
+	VectorStoreIDs []string `tfsdk:"vector_store_ids"`
+}
+
+func (r *AssistantResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_assistant"
 }
 
-func (r *AssistantResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *AssistantResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Create and manage OpenAI Assistants to help with tasks using models, tools, and knowledge.",
+		MarkdownDescription: "Creates and manages an OpenAI Assistant, which can use various tools and capabilities to help with tasks.",
+
+		Blocks: map[string]schema.Block{
+			"tool_resources": schema.SingleNestedBlock{
+				MarkdownDescription: "Resources made available to the assistant's tools.",
+				Blocks: map[string]schema.Block{
+					"code_interpreter": schema.SingleNestedBlock{
+						MarkdownDescription: "Resources for the code interpreter tool.",
+						Attributes: map[string]schema.Attribute{
+							"file_ids": schema.ListAttribute{
+								MarkdownDescription: "File IDs that the code interpreter can use.",
+								ElementType:         types.StringType,
+								Optional:            true,
+							},
+						},
+					},
+					"file_search": schema.SingleNestedBlock{
+						MarkdownDescription: "Resources for the file search tool.",
+						Attributes: map[string]schema.Attribute{
+							"vector_store_ids": schema.ListAttribute{
+								MarkdownDescription: "Vector store IDs for the file search tool.",
+								ElementType:         types.StringType,
+								Optional:            true,
+							},
+						},
+					},
+				},
+			},
+		},
+
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
+				MarkdownDescription: "The unique identifier of the assistant.",
 				Computed:            true,
-				MarkdownDescription: "Unique identifier for this resource.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "The name of the assistant. This is visible in the OpenAI dashboard.",
+				MarkdownDescription: "The name of the assistant.",
 				Optional:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "A description of the assistant's purpose and capabilities.",
+				MarkdownDescription: "The description of the assistant.",
 				Optional:            true,
 			},
 			"model": schema.StringAttribute{
-				MarkdownDescription: "The model that the assistant will use (e.g., 'gpt-4', 'gpt-3.5-turbo').",
+				MarkdownDescription: "ID of the model to use for the assistant.",
 				Required:            true,
 			},
 			"instructions": schema.StringAttribute{
-				MarkdownDescription: "Instructions that the assistant uses to guide its responses.",
+				MarkdownDescription: "The system instructions that the assistant uses for tasks.",
 				Optional:            true,
 			},
-			"file_path": schema.StringAttribute{
-				MarkdownDescription: "Path to the file to be used by the assistant. Must be accessible by the provider.",
-				Optional:            true,
-			},
-			"file_ids": schema.SetAttribute{
-				MarkdownDescription: "List of file IDs that the assistant should have access to. These can be files uploaded through the openai_file resource.",
+			"tools": schema.ListAttribute{
+				MarkdownDescription: "A list of tools enabled for the assistant. Valid values are: code_interpreter, file_search, and function.",
 				Optional:            true,
 				ElementType:         types.StringType,
 			},
 			"metadata": schema.MapAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Metadata in key-value pairs to attach to the assistant.",
+				MarkdownDescription: "Metadata in key-value pairs for the assistant.",
 				Optional:            true,
-			},
-			"object_id": schema.StringAttribute{
-				MarkdownDescription: "The OpenAI ID assigned to this assistant.",
-				Computed:            true,
 			},
 			"created_at": schema.Int64Attribute{
 				MarkdownDescription: "The Unix timestamp (in seconds) for when the assistant was created.",
 				Computed:            true,
-			},
-		},
-		Blocks: map[string]schema.Block{
-			"tools": schema.SetNestedBlock{
-				MarkdownDescription: "A list of tools the assistant can use. Can include 'code_interpreter', 'file_search', or function tools.",
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"type": schema.StringAttribute{
-							MarkdownDescription: "The type of tool. Can be 'code_interpreter', 'file_search', or 'function'.",
-							Required:            true,
-						},
-						"function_definition": schema.StringAttribute{
-							MarkdownDescription: "JSON string of the function definition when type is 'function'.",
-							Optional:            true,
-						},
-					},
-				},
 			},
 		},
 	}
@@ -150,45 +161,12 @@ func (r *AssistantResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	// First, upload the file if provided
-	var uploadedFileID string
-	if !plan.FilePath.IsNull() {
-		filePath := plan.FilePath.ValueString()
-		// Create a file upload
-		file, err := os.Open(filePath)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error Opening File",
-				fmt.Sprintf("Unable to open file %s: %s", filePath, err),
-			)
-			return
-		}
-		defer file.Close()
-
-		// Make sure we explicitly set purpose to assistants to ensure v2 headers are added
-		fileReq := openai.FileRequest{
-			FileName: filepath.Base(filePath),
-			FilePath: filePath,
-			Purpose:  string(openai.PurposeAssistants),
-		}
-
-		// Upload the file which should now use v2 headers due to purpose
-		uploadedFile, err := r.client.OpenAI.CreateFile(ctx, fileReq)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error Uploading File",
-				fmt.Sprintf("Unable to upload file %s: %s", filePath, r.client.HandleError(err)),
-			)
-			return
-		}
-		uploadedFileID = uploadedFile.ID
-	}
-
 	// Create the assistant request
 	assistantReq := openai.AssistantRequest{
 		Model: plan.Model.ValueString(),
 	}
 
+	// Set optional parameters
 	if !plan.Name.IsNull() {
 		name := plan.Name.ValueString()
 		assistantReq.Name = &name
@@ -206,8 +184,15 @@ func (r *AssistantResource) Create(ctx context.Context, req resource.CreateReque
 
 	// Process tools if provided
 	if !plan.Tools.IsNull() {
-		tools, diags := convertToolsToOpenAI(ctx, plan.Tools)
+		var toolStrings []string
+		diags = plan.Tools.ElementsAs(ctx, &toolStrings, false)
 		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		tools, toolDiags := convertToolsToOpenAI(ctx, toolStrings)
+		resp.Diagnostics.Append(toolDiags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -216,20 +201,26 @@ func (r *AssistantResource) Create(ctx context.Context, req resource.CreateReque
 
 	// Process metadata if provided
 	if !plan.Metadata.IsNull() {
-		var stringMetadata map[string]string
-		diags := plan.Metadata.ElementsAs(ctx, &stringMetadata, false)
+		metadata := make(map[string]string)
+		diags := plan.Metadata.ElementsAs(ctx, &metadata, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		metadata := make(map[string]interface{})
-		for k, v := range stringMetadata {
-			metadata[k] = v
-		}
-		assistantReq.Metadata = metadata
+		assistantReq.Metadata = convertToMapStringAny(metadata)
 	}
 
-	// Create the assistant first without files
+	// Handle tool_resources if provided
+	if plan.ToolResources != nil {
+		toolResources, diags := convertToolResourcesToOpenAI(ctx, plan.ToolResources)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		assistantReq.ToolResources = toolResources
+	}
+
+	// Create the assistant
 	assistant, err := r.client.OpenAI.CreateAssistant(ctx, assistantReq)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -239,45 +230,41 @@ func (r *AssistantResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	// Now attach files if we have any
-	var fileIDs []string
-	if !plan.FileIDs.IsNull() {
-		diags := plan.FileIDs.ElementsAs(ctx, &fileIDs, false)
+	// Update state with response
+	plan.ID = types.StringValue(assistant.ID)
+	plan.CreatedAt = types.Int64Value(int64(assistant.CreatedAt))
+
+	// Convert tools back to state
+	if len(assistant.Tools) > 0 {
+		toolStrings, diags := convertOpenAIToolsToTerraform(ctx, assistant.Tools)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-	}
 
-	if uploadedFileID != "" {
-		fileIDs = append(fileIDs, uploadedFileID)
-	}
-
-	// Attach each file to the assistant
-	for _, fileID := range fileIDs {
-		_, err := r.client.OpenAI.CreateAssistantFile(ctx, assistant.ID, openai.AssistantFileRequest{
-			FileID: fileID,
-		})
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error Attaching File",
-				fmt.Sprintf("Unable to attach file %s to assistant: %s", fileID, r.client.HandleError(err)),
-			)
+		toolsList, diags := types.ListValueFrom(ctx, types.StringType, toolStrings)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
 			return
 		}
+		plan.Tools = toolsList
+	} else {
+		plan.Tools = types.ListNull(types.StringType)
 	}
 
-	// Update the state with the response
-	plan.ID = types.StringValue(assistant.ID)
-	plan.ObjectID = types.StringValue(assistant.ID)
-	plan.CreatedAt = types.Int64Value(int64(assistant.CreatedAt))
+	// Convert tool resources back to state
+	if assistant.ToolResources != nil {
+		toolResources, diags := convertOpenAIToolResourcesToTerraform(ctx, assistant.ToolResources)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		plan.ToolResources = toolResources
+	}
 
-	// Save into state
+	// Save the updated state
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 }
 
 func (r *AssistantResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -287,7 +274,7 @@ func (r *AssistantResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	assistantID := state.ObjectID.ValueString()
+	assistantID := state.ID.ValueString()
 	if assistantID == "" {
 		resp.Diagnostics.AddError(
 			"Error Reading Assistant",
@@ -315,7 +302,10 @@ func (r *AssistantResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	// Update the state with the latest values
+	// Update state with the latest values from the API
+	state.Model = types.StringValue(assistant.Model)
+	state.CreatedAt = types.Int64Value(int64(assistant.CreatedAt))
+
 	if assistant.Name != nil {
 		state.Name = types.StringValue(*assistant.Name)
 	} else {
@@ -328,32 +318,32 @@ func (r *AssistantResource) Read(ctx context.Context, req resource.ReadRequest, 
 		state.Description = types.StringNull()
 	}
 
-	state.Model = types.StringValue(assistant.Model)
-
 	if assistant.Instructions != nil {
 		state.Instructions = types.StringValue(*assistant.Instructions)
 	} else {
 		state.Instructions = types.StringNull()
 	}
 
-	state.CreatedAt = types.Int64Value(int64(assistant.CreatedAt))
-
 	// Convert tools
 	if len(assistant.Tools) > 0 {
-		toolsList, diags := convertOpenAIToolsToTerraform(ctx, assistant.Tools)
+		toolStrings, diags := convertOpenAIToolsToTerraform(ctx, assistant.Tools)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		toolsList, diags := types.ListValueFrom(ctx, types.StringType, toolStrings)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 		state.Tools = toolsList
+	} else {
+		state.Tools = types.ListNull(types.StringType)
 	}
-
-	// Keep the file_path from the existing state
-	// We don't update it from the API since it's a local path
 
 	// Convert metadata
 	if assistant.Metadata != nil {
-		// Convert from map[string]any to map[string]string
 		stringMetadata := make(map[string]string)
 		for k, v := range assistant.Metadata {
 			if strVal, ok := v.(string); ok {
@@ -369,21 +359,21 @@ func (r *AssistantResource) Read(ctx context.Context, req resource.ReadRequest, 
 			return
 		}
 		state.Metadata = metadataMap
+	} else {
+		state.Metadata = types.MapNull(types.StringType)
 	}
 
-	// Update file IDs in state
-	if len(assistant.FileIDs) > 0 {
-		fileIDsSet, diags := types.SetValueFrom(ctx, types.StringType, assistant.FileIDs)
+	// Convert tool resources
+	if assistant.ToolResources != nil {
+		toolResources, diags := convertOpenAIToolResourcesToTerraform(ctx, assistant.ToolResources)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		state.FileIDs = fileIDsSet
-	} else {
-		state.FileIDs = types.SetNull(types.StringType)
+		state.ToolResources = toolResources
 	}
 
-	// Save into state
+	// Save the updated state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -391,19 +381,13 @@ func (r *AssistantResource) Update(ctx context.Context, req resource.UpdateReque
 	var plan AssistantResourceModel
 	var state AssistantResourceModel
 
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	diags = req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	assistantID := state.ObjectID.ValueString()
+	assistantID := state.ID.ValueString()
 	if assistantID == "" {
 		resp.Diagnostics.AddError(
 			"Error Updating Assistant",
@@ -412,7 +396,7 @@ func (r *AssistantResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	// Create the update request
+	// Create update request
 	assistantReq := openai.AssistantRequest{
 		Model: plan.Model.ValueString(),
 	}
@@ -435,7 +419,14 @@ func (r *AssistantResource) Update(ctx context.Context, req resource.UpdateReque
 
 	// Process tools if provided
 	if !plan.Tools.IsNull() {
-		tools, toolDiags := convertToolsToOpenAI(ctx, plan.Tools)
+		var toolStrings []string
+		diags := plan.Tools.ElementsAs(ctx, &toolStrings, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		tools, toolDiags := convertToolsToOpenAI(ctx, toolStrings)
 		resp.Diagnostics.Append(toolDiags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -454,7 +445,17 @@ func (r *AssistantResource) Update(ctx context.Context, req resource.UpdateReque
 		assistantReq.Metadata = convertToMapStringAny(metadata)
 	}
 
-	// Update the assistant first
+	// Handle tool_resources if provided
+	if plan.ToolResources != nil {
+		toolResources, diags := convertToolResourcesToOpenAI(ctx, plan.ToolResources)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		assistantReq.ToolResources = toolResources
+	}
+
+	// Update the assistant
 	assistant, err := r.client.OpenAI.ModifyAssistant(ctx, assistantID, assistantReq)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -464,123 +465,39 @@ func (r *AssistantResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	// Handle file changes
-	var newFileIDs []string
-	var oldFileIDs []string
-
-	// Get new file IDs from plan
-	if !plan.FileIDs.IsNull() {
-		diags := plan.FileIDs.ElementsAs(ctx, &newFileIDs, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	// Get old file IDs from state
-	if !state.FileIDs.IsNull() {
-		diags := state.FileIDs.ElementsAs(ctx, &oldFileIDs, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	// Handle new file upload if file_path changed
-	if !plan.FilePath.IsNull() && !plan.FilePath.Equal(state.FilePath) {
-		filePath := plan.FilePath.ValueString()
-		file, err := os.Open(filePath)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error Opening File",
-				fmt.Sprintf("Unable to open file %s: %s", filePath, err),
-			)
-			return
-		}
-		defer file.Close()
-
-		// Make sure we explicitly set purpose to assistants to ensure v2 headers are added
-		fileReq := openai.FileRequest{
-			FileName: filepath.Base(filePath),
-			FilePath: filePath,
-			Purpose:  string(openai.PurposeAssistants),
-		}
-
-		uploadedFile, err := r.client.OpenAI.CreateFile(ctx, fileReq)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error Uploading File",
-				fmt.Sprintf("Unable to upload file %s: %s", filePath, r.client.HandleError(err)),
-			)
-			return
-		}
-		newFileIDs = append(newFileIDs, uploadedFile.ID)
-	}
-
-	// Get current assistant files
-	assistantFiles, err := r.client.OpenAI.ListAssistantFiles(ctx, assistantID, nil, nil, nil, nil)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Listing Assistant Files",
-			fmt.Sprintf("Unable to list assistant files: %s", r.client.HandleError(err)),
-		)
-		return
-	}
-
-	// Remove files that are no longer needed
-	for _, file := range assistantFiles.AssistantFiles {
-		found := false
-		for _, newID := range newFileIDs {
-			if file.ID == newID {
-				found = true
-				break
-			}
-		}
-		if !found {
-			err := r.client.OpenAI.DeleteAssistantFile(ctx, assistantID, file.ID)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					"Error Removing File",
-					fmt.Sprintf("Unable to remove file %s from assistant: %s", file.ID, r.client.HandleError(err)),
-				)
-				return
-			}
-		}
-	}
-
-	// Add new files
-	for _, newID := range newFileIDs {
-		found := false
-		for _, file := range assistantFiles.AssistantFiles {
-			if file.ID == newID {
-				found = true
-				break
-			}
-		}
-		if !found {
-			_, err := r.client.OpenAI.CreateAssistantFile(ctx, assistantID, openai.AssistantFileRequest{
-				FileID: newID,
-			})
-			if err != nil {
-				resp.Diagnostics.AddError(
-					"Error Adding File",
-					fmt.Sprintf("Unable to add file %s to assistant: %s", newID, r.client.HandleError(err)),
-				)
-				return
-			}
-		}
-	}
-
-	// Update the state
-	plan.ObjectID = types.StringValue(assistant.ID)
+	// Update plan with response data
 	plan.CreatedAt = types.Int64Value(int64(assistant.CreatedAt))
 
-	// Save into state
-	diags = resp.State.Set(ctx, plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	// Convert tools back to state
+	if len(assistant.Tools) > 0 {
+		toolStrings, diags := convertOpenAIToolsToTerraform(ctx, assistant.Tools)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		toolsList, diags := types.ListValueFrom(ctx, types.StringType, toolStrings)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		plan.Tools = toolsList
+	} else {
+		plan.Tools = types.ListNull(types.StringType)
 	}
+
+	// Convert tool resources back to state
+	if assistant.ToolResources != nil {
+		toolResources, diags := convertOpenAIToolResourcesToTerraform(ctx, assistant.ToolResources)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		plan.ToolResources = toolResources
+	}
+
+	// Save the updated state
+	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }
 
 func (r *AssistantResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -590,7 +507,7 @@ func (r *AssistantResource) Delete(ctx context.Context, req resource.DeleteReque
 		return
 	}
 
-	assistantID := state.ObjectID.ValueString()
+	assistantID := state.ID.ValueString()
 	if assistantID == "" {
 		// Nothing to delete
 		return
@@ -600,37 +517,7 @@ func (r *AssistantResource) Delete(ctx context.Context, req resource.DeleteReque
 		"assistant_id": assistantID,
 	})
 
-	// First delete all assistant files
-	assistantFiles, err := r.client.OpenAI.ListAssistantFiles(ctx, assistantID, nil, nil, nil, nil)
-	if err != nil {
-		// If assistant doesn't exist, don't return an error
-		if apiErr, ok := err.(*openai.APIError); ok && apiErr.HTTPStatusCode == 404 {
-			return
-		}
-		resp.Diagnostics.AddError(
-			"Error Listing Assistant Files",
-			fmt.Sprintf("Unable to list assistant files: %s", r.client.HandleError(err)),
-		)
-		return
-	}
-
-	for _, file := range assistantFiles.AssistantFiles {
-		err := r.client.OpenAI.DeleteAssistantFile(ctx, assistantID, file.ID)
-		if err != nil {
-			// If file is already gone, continue
-			if apiErr, ok := err.(*openai.APIError); ok && apiErr.HTTPStatusCode == 404 {
-				continue
-			}
-			resp.Diagnostics.AddError(
-				"Error Deleting Assistant File",
-				fmt.Sprintf("Unable to delete file %s from assistant: %s", file.ID, r.client.HandleError(err)),
-			)
-			return
-		}
-	}
-
-	// Then delete the assistant
-	_, err = r.client.OpenAI.DeleteAssistant(ctx, assistantID)
+	_, err := r.client.OpenAI.DeleteAssistant(ctx, assistantID)
 	if err != nil {
 		// If assistant doesn't exist, don't return an error
 		if apiErr, ok := err.(*openai.APIError); ok && apiErr.HTTPStatusCode == 404 {
@@ -645,65 +532,35 @@ func (r *AssistantResource) Delete(ctx context.Context, req resource.DeleteReque
 }
 
 func (r *AssistantResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("object_id"), req, resp)
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
 // Helper function to convert from Terraform tools to OpenAI tools
-func convertToolsToOpenAI(ctx context.Context, toolsAttr types.Set) ([]openai.AssistantTool, diag.Diagnostics) {
+func convertToolsToOpenAI(ctx context.Context, toolNames []string) ([]openai.AssistantTool, diag.Diagnostics) {
 	var diags diag.Diagnostics
-	var tools []AssistantToolModel
+	openaiTools := make([]openai.AssistantTool, 0, len(toolNames))
 
-	if toolsAttr.IsNull() || toolsAttr.IsUnknown() {
-		return nil, diags
-	}
-
-	diags.Append(toolsAttr.ElementsAs(ctx, &tools, false)...)
-	if diags.HasError() {
-		return nil, diags
-	}
-
-	openaiTools := make([]openai.AssistantTool, 0, len(tools))
-
-	for _, tool := range tools {
-		if tool.Type.IsNull() {
-			diags.AddAttributeError(
-				path.Root("tools"),
-				"Invalid Tool",
-				"Tool must have a type.",
-			)
-			continue
-		}
-
-		toolType := tool.Type.ValueString()
-		switch toolType {
+	for _, toolName := range toolNames {
+		switch toolName {
 		case "code_interpreter":
 			openaiTools = append(openaiTools, openai.AssistantTool{
 				Type: openai.AssistantToolTypeCodeInterpreter,
 			})
 		case "file_search":
 			openaiTools = append(openaiTools, openai.AssistantTool{
-				Type: "file_search", // Use file_search directly instead of converting to retrieval
+				Type: "file_search",
 			})
 		case "function":
-			if tool.FunctionDefinition.IsNull() {
-				diags.AddAttributeError(
-					path.Root("tools").AtName("function_definition"),
-					"Missing Function Definition",
-					"Function tools must have a function_definition.",
-				)
-				continue
-			}
-			openaiTools = append(openaiTools, openai.AssistantTool{
-				Type: openai.AssistantToolTypeFunction,
-				Function: &openai.FunctionDefinition{
-					Description: tool.FunctionDefinition.ValueString(),
-				},
-			})
+			diags.AddAttributeError(
+				path.Root("tools"),
+				"Invalid Tool Configuration",
+				"Function tool type requires function definition. Use tool_resources to configure functions.",
+			)
 		default:
 			diags.AddAttributeError(
-				path.Root("tools").AtName("type"),
+				path.Root("tools"),
 				"Invalid Tool Type",
-				fmt.Sprintf("Tool type '%s' is not supported. Must be 'code_interpreter', 'file_search', or 'function'.", toolType),
+				fmt.Sprintf("Tool type '%s' is not supported. Must be 'code_interpreter', 'file_search', or 'function'.", toolName),
 			)
 		}
 	}
@@ -712,53 +569,22 @@ func convertToolsToOpenAI(ctx context.Context, toolsAttr types.Set) ([]openai.As
 }
 
 // Helper function to convert from OpenAI tools to Terraform tools
-func convertOpenAIToolsToTerraform(ctx context.Context, tools []openai.AssistantTool) (types.Set, diag.Diagnostics) {
+func convertOpenAIToolsToTerraform(ctx context.Context, tools []openai.AssistantTool) ([]string, diag.Diagnostics) {
 	var diags diag.Diagnostics
-	tfTools := make([]attr.Value, 0, len(tools))
+	tfTools := make([]string, 0, len(tools))
 
 	for _, tool := range tools {
-		toolMap := make(map[string]attr.Value)
 		switch tool.Type {
 		case openai.AssistantToolTypeCodeInterpreter:
-			toolMap["type"] = types.StringValue("code_interpreter")
-			toolMap["function_definition"] = types.StringNull()
-		case "file_search", openai.AssistantToolTypeRetrieval: // Handle both file_search and retrieval
-			toolMap["type"] = types.StringValue("file_search")
-			toolMap["function_definition"] = types.StringNull()
+			tfTools = append(tfTools, "code_interpreter")
+		case "file_search", openai.AssistantToolTypeRetrieval:
+			tfTools = append(tfTools, "file_search")
 		case openai.AssistantToolTypeFunction:
-			toolMap["type"] = types.StringValue("function")
-			if tool.Function != nil {
-				toolMap["function_definition"] = types.StringValue(tool.Function.Description)
-			} else {
-				toolMap["function_definition"] = types.StringNull()
-			}
+			tfTools = append(tfTools, "function")
 		}
-
-		toolObj, d := types.ObjectValue(
-			map[string]attr.Type{
-				"type":                types.StringType,
-				"function_definition": types.StringType,
-			},
-			toolMap,
-		)
-		diags.Append(d...)
-		if diags.HasError() {
-			continue
-		}
-		tfTools = append(tfTools, toolObj)
 	}
 
-	toolsSet, d := types.SetValue(
-		types.ObjectType{
-			AttrTypes: map[string]attr.Type{
-				"type":                types.StringType,
-				"function_definition": types.StringType,
-			},
-		},
-		tfTools,
-	)
-	diags.Append(d...)
-	return toolsSet, diags
+	return tfTools, diags
 }
 
 // Helper function to convert map[string]string to map[string]interface{}
@@ -768,4 +594,71 @@ func convertToMapStringAny(in map[string]string) map[string]interface{} {
 		result[k] = v
 	}
 	return result
+}
+
+// Helper function to convert from Terraform tool resources to OpenAI tool resources
+func convertToolResourcesToOpenAI(ctx context.Context, toolResourcesAttr *AssistantToolResourcesModel) (*openai.AssistantToolResource, diag.Diagnostics) {
+	if toolResourcesAttr == nil {
+		return nil, nil
+	}
+
+	var diags diag.Diagnostics
+	var hasResources bool
+	toolResources := &openai.AssistantToolResource{}
+
+	// Only include file_search if it has vector store IDs
+	if toolResourcesAttr.FileSearch != nil && len(toolResourcesAttr.FileSearch.VectorStoreIDs) > 0 {
+		hasResources = true
+		toolResources.FileSearch = &openai.AssistantToolFileSearch{
+			VectorStoreIDs: toolResourcesAttr.FileSearch.VectorStoreIDs,
+		}
+	}
+
+	// Only include code_interpreter if it has file IDs
+	if toolResourcesAttr.CodeInterpreter != nil && len(toolResourcesAttr.CodeInterpreter.FileIDs) > 0 {
+		hasResources = true
+		toolResources.CodeInterpreter = &openai.AssistantToolCodeInterpreter{
+			FileIDs: toolResourcesAttr.CodeInterpreter.FileIDs,
+		}
+	}
+
+	if !hasResources {
+		return nil, diags
+	}
+
+	return toolResources, diags
+}
+
+// Helper function to convert from OpenAI tool resources to Terraform tool resources
+func convertOpenAIToolResourcesToTerraform(ctx context.Context, toolResources *openai.AssistantToolResource) (*AssistantToolResourcesModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	if toolResources == nil {
+		return nil, diags
+	}
+
+	var hasResources bool
+	tfToolResources := &AssistantToolResourcesModel{}
+
+	// Only convert file_search if it has vector store IDs
+	if toolResources.FileSearch != nil && len(toolResources.FileSearch.VectorStoreIDs) > 0 {
+		hasResources = true
+		tfToolResources.FileSearch = &AssistantToolResourcesFileSearchModel{
+			VectorStoreIDs: toolResources.FileSearch.VectorStoreIDs,
+		}
+	}
+
+	// Only convert code_interpreter if it has file IDs
+	if toolResources.CodeInterpreter != nil && len(toolResources.CodeInterpreter.FileIDs) > 0 {
+		hasResources = true
+		tfToolResources.CodeInterpreter = &AssistantToolResourcesCodeInterpreterModel{
+			FileIDs: toolResources.CodeInterpreter.FileIDs,
+		}
+	}
+
+	if !hasResources {
+		return nil, diags
+	}
+
+	return tfToolResources, diags
 }

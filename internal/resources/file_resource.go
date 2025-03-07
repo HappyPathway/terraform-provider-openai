@@ -3,6 +3,7 @@ package resources
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/darnold/terraform-provider-openai/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -144,11 +145,16 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 	// Update the state
 	plan.ID = types.StringValue(file.ID)
 	plan.ObjectID = types.StringValue(file.ID)
-	plan.Filename = types.StringValue(file.FileName)
-	plan.Bytes = types.Int64Value(int64(file.Bytes))
 	plan.CreatedAt = types.Int64Value(int64(file.CreatedAt))
+	plan.Bytes = types.Int64Value(int64(file.Bytes))
+	plan.Filename = types.StringValue(filepath.Base(file.FileName)) // Use just the base filename
+	plan.Purpose = types.StringValue(file.Purpose)
 	plan.Status = types.StringValue(file.Status)
-	plan.StatusDetails = types.StringValue(file.StatusDetails)
+	if file.StatusDetails != "" {
+		plan.StatusDetails = types.StringValue(file.StatusDetails)
+	} else {
+		plan.StatusDetails = types.StringNull()
+	}
 
 	// Save into state
 	diags = resp.State.Set(ctx, plan)
@@ -261,8 +267,14 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	plan.ObjectID = types.StringValue(file.ID)
 	plan.Bytes = types.Int64Value(int64(file.Bytes))
 	plan.CreatedAt = types.Int64Value(int64(file.CreatedAt))
+	plan.Filename = types.StringValue(filepath.Base(file.FileName)) // Use just the base filename
+	plan.Purpose = types.StringValue(file.Purpose)
 	plan.Status = types.StringValue(file.Status)
-	plan.StatusDetails = types.StringValue(file.StatusDetails)
+	if file.StatusDetails != "" {
+		plan.StatusDetails = types.StringValue(file.StatusDetails)
+	} else {
+		plan.StatusDetails = types.StringNull()
+	}
 
 	// Save into state
 	diags = resp.State.Set(ctx, plan)

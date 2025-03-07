@@ -44,6 +44,7 @@ type MessageResourceModel struct {
 	ResponseContent types.String `tfsdk:"response_content"`
 	WaitForResponse types.Bool   `tfsdk:"wait_for_response"`
 	RunID           types.String `tfsdk:"run_id"`
+	Attachments     types.List   `tfsdk:"attachments"`
 }
 
 func (r *MessageResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -104,6 +105,24 @@ func (r *MessageResource) Schema(ctx context.Context, req resource.SchemaRequest
 			"run_id": schema.StringAttribute{
 				MarkdownDescription: "If assistant_id is provided, this will contain the ID of the run created to generate the response.",
 				Computed:            true,
+				Optional:            true,
+			},
+			"attachments": schema.ListNestedAttribute{
+				Optional:            true,
+				MarkdownDescription: "Files to attach to the message. The files will be added to the thread's tool_resources.",
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"file_id": schema.StringAttribute{
+							Required:            true,
+							MarkdownDescription: "ID of the file to attach.",
+						},
+						"tools": schema.ListAttribute{
+							Required:            true,
+							ElementType:         types.StringType,
+							MarkdownDescription: "List of tools that can use this file. Can be 'code_interpreter' and/or 'file_search'.",
+						},
+					},
+				},
 			},
 		},
 	}
@@ -146,8 +165,9 @@ func (r *MessageResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Create the message request
 	messageReq := openai.MessageRequest{
-		Role:    plan.Role.ValueString(),
-		Content: plan.Content.ValueString(),
+		Role:     plan.Role.ValueString(),
+		Content:  plan.Content.ValueString(),
+		Metadata: make(map[string]interface{}),
 	}
 
 	// Process file IDs if provided
@@ -176,6 +196,35 @@ func (r *MessageResource) Create(ctx context.Context, req resource.CreateRequest
 			metadataAny[k] = v
 		}
 		messageReq.Metadata = metadataAny
+	}
+
+	// Process attachments if provided
+	if !plan.Attachments.IsNull() {
+		var attachments []map[string]interface{}
+		diags := plan.Attachments.ElementsAs(ctx, &attachments, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		messageAttachments := make([]openai.ThreadAttachment, 0, len(attachments))
+		for _, attachment := range attachments {
+			fileID := attachment["file_id"].(string)
+			toolsList := attachment["tools"].([]string)
+
+			tools := make([]openai.ThreadAttachmentTool, 0, len(toolsList))
+			for _, tool := range toolsList {
+				tools = append(tools, openai.ThreadAttachmentTool{
+					Type: tool,
+				})
+			}
+
+			messageAttachments = append(messageAttachments, openai.ThreadAttachment{
+				FileID: fileID,
+				Tools:  tools,
+			})
+		}
+		messageReq.Attachments = messageAttachments
 	}
 
 	tflog.Debug(ctx, "Creating message", map[string]interface{}{
@@ -560,22 +609,6 @@ func (r *MessageResource) waitForRunCompletion(ctx context.Context, threadID, ru
 	}
 
 	return nil, fmt.Errorf("run did not complete within the timeout period")
-}
-
-func (r *MessageResource) waitForRun(ctx context.Context, threadID, runID string) (*openai.Run, error) {
-	run, err := r.client.OpenAI.RetrieveRun(ctx, threadID, runID)
-	if err != nil {
-		return nil, err
-	}
-	return &run, nil
-}
-
-func (r *MessageResource) waitForRunAndSubmitToolOutputs(ctx context.Context, threadID, runID string) (openai.Run, error) {
-	run, err := r.client.OpenAI.RetrieveRun(ctx, threadID, runID)
-	if err != nil {
-		return openai.Run{}, err
-	}
-	return run, nil
 }
 
 func (r *MessageResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {

@@ -42,9 +42,13 @@ output "assistant_details" {
 - `model` - The model used by the assistant.
 - `instructions` - The instructions that set the behavior and capabilities of the assistant.
 - `tools` - A list of tools enabled for the assistant. Each tool contains:
-  - `type` - The tool type, such as "retrieval", "code_interpreter", or "function".
-  - `function` - For function tools, details about the function.
-- `file_ids` - A list of file IDs attached to the assistant.
+  - `type` - The tool type, such as "file_search", "code_interpreter", or "function".
+  - `function` - For function tools, the function definition as a JSON string.
+- `tool_resources` - Resources made available to the assistant's tools:
+  - `code_interpreter` - Configuration for the code interpreter tool:
+    - `file_ids` - List of file IDs that the code interpreter can use.
+  - `file_search` - Configuration for the file search tool:
+    - `vector_store_ids` - List of vector store IDs for the file search capability.
 - `metadata` - Additional key-value pairs associated with the assistant.
 - `created_at` - The timestamp when the assistant was created.
 - `object` - The object type, always "assistant".

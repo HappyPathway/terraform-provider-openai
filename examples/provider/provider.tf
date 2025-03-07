@@ -8,9 +8,11 @@ terraform {
 
 # Configure the OpenAI Provider
 provider "openai" {
-  # api_key = "your-api-key" # or use OPENAI_API_KEY env var
-  # organization = "your-org-id" # or use OPENAI_ORGANIZATION env var
-  # enable_debug_logging = true
+  # Configure OpenAI API key - this can also be set via OPENAI_API_KEY environment variable
+  # api_key = "your-api-key"
+
+  # Optional: Configure organization ID if you're part of multiple organizations
+  # organization_id = "your-org-id"
 }
 
 # Use the OpenAI model data source 

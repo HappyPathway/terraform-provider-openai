@@ -23,16 +23,13 @@ resource "openai_assistant" "customer_support" {
   model        = "gpt-4-1106-preview"
   instructions = "You are a customer support assistant for a tech company. Answer questions helpfully and accurately based on the provided knowledge base."
 
-  tools = [
-    {
-      type = "retrieval"
-    },
-    {
-      type = "code_interpreter"
-    }
-  ]
+  tools = ["code_interpreter"]
 
-  file_ids = [openai_file.knowledge_base.id]
+  tool_resources {
+    code_interpreter {
+      file_ids = [openai_file.knowledge_base.id]
+    }
+  }
 
   metadata = {
     department = "customer_support"
@@ -48,11 +45,15 @@ resource "openai_assistant" "customer_support" {
 - `description` - (Optional) The description of the assistant.
 - `model` - (Required) The model to use for the assistant, e.g., "gpt-4-1106-preview" or "gpt-3.5-turbo".
 - `instructions` - (Optional) Instructions for how the assistant should behave and respond.
-- `tools` - (Optional) A list of tools enabled for the assistant. Each tool has a `type` which can be:
-  - `"retrieval"` - Allows the assistant to access its knowledge base.
-  - `"code_interpreter"` - Enables the assistant to write and execute code.
-  - `"function"` - Lets the assistant call external functions.
-- `file_ids` - (Optional) A list of file IDs that have been uploaded to OpenAI with the purpose "assistants".
+- `tools` - (Optional) A list of tool names to enable for the assistant. Valid values are:
+  - `"code_interpreter"` - Enables the assistant to write and execute code
+  - `"file_search"` - Allows the assistant to search through uploaded files
+  - `"function"` - Enables function calling capability
+- `tool_resources` - (Optional) Configuration block for resources made available to the assistant's tools:
+  - `code_interpreter` - (Optional) Configuration for the code interpreter tool:
+    - `file_ids` - (Optional) List of file IDs that the code interpreter can use
+  - `file_search` - (Optional) Configuration for the file search tool:
+    - `vector_store_ids` - (Optional) List of vector store IDs for the file search capability
 - `metadata` - (Optional) A map of key-value pairs that can be used to organize and categorize the assistant.
 
 ## Attribute Reference
@@ -61,12 +62,11 @@ In addition to all arguments above, the following attributes are exported:
 
 - `id` - The OpenAI-assigned ID for this assistant.
 - `created_at` - The timestamp when the assistant was created.
-- `object` - The object type, always "assistant".
 
 ## Import
 
 Assistants can be imported using the OpenAI assistant ID:
 
-```
+```shell
 $ terraform import openai_assistant.example asst_abc123
 ```

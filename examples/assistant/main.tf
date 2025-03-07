@@ -37,19 +37,7 @@ resource "openai_assistant" "customer_support" {
     5. Format responses with markdown when helpful
   EOT
 
-  tools {
-    type = "file_search"
-  }
-
-  tools {
-    type = "code_interpreter"
-  }
-
-  # # Attach multiple knowledge base files
-  # file_ids = [
-  #   openai_file.knowledge_base.id,
-  #   openai_file.additional_info.id
-  # ]
+  tools = ["code_interpreter", "file_search"]
 
   # Add metadata for organization
   metadata = {
