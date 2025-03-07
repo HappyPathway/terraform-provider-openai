@@ -49,14 +49,7 @@ resource "openai_assistant" "security_scanner" {
     - Reference relevant AWS security best practices
   EOT
 
-  tools = [
-    {
-      type = "code_interpreter"
-    },
-    {
-      type = "file_search"
-    }
-  ]
+  tools = ["code_interpreter", "file_search"]
 
   tool_resources {
     code_interpreter {
@@ -85,12 +78,6 @@ resource "openai_assistant" "security_scanner" {
   }
 }
 
-# Create variables for infrastructure code to be scanned
-variable "infrastructure_code" {
-  description = "Infrastructure code to be scanned (as a string)"
-  type        = string
-}
-
 # Create a thread for the security scanning session
 resource "openai_thread" "security_scan" {
   metadata = {
@@ -100,14 +87,14 @@ resource "openai_thread" "security_scan" {
   }
 
   # Initialize thread with tool resources
-  tool_resources = {
-    code_interpreter = {
+  tool_resources {
+    code_interpreter {
       file_ids = [
         openai_file.security_policies.id,
         openai_file.compliance_standards.id
       ]
     }
-    file_search = {
+    file_search {
       vector_store_ids = [
         openai_file.security_policies.id,
         openai_file.compliance_standards.id,
@@ -119,9 +106,9 @@ resource "openai_thread" "security_scan" {
 
 # Initialize the scanning process with a message
 resource "openai_message" "scan_request" {
-  thread_id = openai_thread.security_scan.id
-  role      = "user"
-  content   = <<-EOT
+  thread_id    = openai_thread.security_scan.id
+  role         = "user"
+  content      = <<-EOT
     Please perform a comprehensive security and compliance analysis of the following infrastructure code.
     Provide a detailed report including:
     1. Security vulnerabilities and misconfigurations
@@ -131,33 +118,15 @@ resource "openai_message" "scan_request" {
     5. References to relevant security policies and best practices
 
     Infrastructure Code:
-    ${var.infrastructure_code}
+    ${local.example_config}
   EOT
-
-  # Attach relevant files for the analysis
-  attachments = [
-    {
-      file_id = openai_file.security_policies.id
-      tools   = ["file_search", "code_interpreter"]
-    },
-    {
-      file_id = openai_file.compliance_standards.id
-      tools   = ["file_search", "code_interpreter"]
-    },
-    {
-      file_id = openai_file.aws_best_practices.id
-      tools   = ["file_search"]
-    }
-  ]
-
-  wait_for_response = true
-  assistant_id      = openai_assistant.security_scanner.id
+  assistant_id = openai_assistant.security_scanner.id
 }
 
 # Output the security analysis results
 output "security_analysis" {
   description = "Detailed security and compliance analysis results"
-  value       = openai_message.scan_request.response_content
+  value       = openai_message.scan_request
 }
 
 # Example infrastructure code

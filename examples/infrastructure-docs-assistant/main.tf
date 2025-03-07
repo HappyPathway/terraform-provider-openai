@@ -13,8 +13,8 @@ resource "openai_file" "architecture_docs" {
 
 # Create an assistant specialized in infrastructure documentation
 resource "openai_assistant" "infra_docs" {
-  name  = "Infrastructure Documentation Assistant"
-  model = "gpt-4-turbo-preview"
+  name         = "Infrastructure Documentation Assistant"
+  model        = "gpt-4-turbo-preview"
   instructions = <<-EOT
     You are a specialized infrastructure documentation assistant.
     Your tasks include:
@@ -42,12 +42,12 @@ resource "openai_assistant" "infra_docs" {
   ]
 
   # In v2, files are attached through tool_resources
-  tool_resources = {
-    code_interpreter = {
+  tool_resources {
+    code_interpreter {
       # Files that can be used by the code interpreter
       file_ids = [openai_file.terraform_docs.id]
     }
-    file_search = {
+    file_search {
       # Files available for semantic search
       vector_store_ids = [
         openai_file.terraform_docs.id,
@@ -57,11 +57,11 @@ resource "openai_assistant" "infra_docs" {
   }
 
   metadata = {
-    department     = "Infrastructure"
-    purpose        = "Documentation Management"
-    version        = "2.0"
-    last_updated   = "2024-04-17"
-    documentation  = "https://platform.openai.com/docs/assistants-api"
+    department    = "Infrastructure"
+    purpose       = "Documentation Management"
+    version       = "2.0"
+    last_updated  = "2024-04-17"
+    documentation = "https://platform.openai.com/docs/assistants-api"
   }
 }
 
@@ -88,19 +88,7 @@ resource "openai_message" "init_docs" {
 
   # Attach both documentation files to this message
   # This will automatically add them to the thread's tool_resources
-  attachments = [
-    {
-      file_id = openai_file.terraform_docs.id
-      tools   = ["file_search", "code_interpreter"]
-    },
-    {
-      file_id = openai_file.architecture_docs.id
-      tools   = ["file_search"]
-    }
-  ]
-
-  wait_for_response = true
-  assistant_id      = openai_assistant.infra_docs.id
+  assistant_id = openai_assistant.infra_docs.id
 }
 
 # Output the assistant's analysis

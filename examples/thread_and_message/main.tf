@@ -15,9 +15,7 @@ resource "openai_assistant" "support_assistant" {
   model        = "gpt-4"
   instructions = "You are a helpful support assistant. Answer user questions clearly and concisely."
 
-  tools {
-    type = "code_interpreter"
-  }
+  tools = ["code_interpreter"]
 }
 
 # Create a thread
@@ -33,11 +31,7 @@ resource "openai_thread" "support_thread" {
 resource "openai_message" "initial_inquiry" {
   thread_id = openai_thread.support_thread.id
   role      = "user"
-  content {
-    type = "text"
-    text = "I have a question about my recent invoice. The amount seems higher than usual."
-  }
-
+  content   = "I have a question about my recent invoice. The amount seems higher than usual."
   metadata = {
     source     = "web_chat"
     importance = "high"
@@ -48,11 +42,7 @@ resource "openai_message" "initial_inquiry" {
 resource "openai_message" "follow_up_details" {
   thread_id = openai_thread.support_thread.id
   role      = "user"
-  content {
-    type = "text"
-    text = "I was charged $59.99 but my usual subscription is $39.99. Can you help me understand why?"
-  }
-
+  content   = "I was charged $59.99 but my usual subscription is $39.99. Can you help me understand why?"
   metadata = {
     source = "web_chat"
   }
@@ -62,11 +52,7 @@ resource "openai_message" "follow_up_details" {
 resource "openai_message" "assistant_response" {
   thread_id = openai_thread.support_thread.id
   role      = "user"
-  content {
-    type = "text"
-    text = "Please analyze the pricing difference and give me possible reasons."
-  }
-
+  content   = "Please analyze the pricing difference and give me possible reasons."
   # This parameter tells the provider to send the message and wait for the assistant's response
   assistant_id = openai_assistant.support_assistant.id
 

@@ -24,16 +24,14 @@ data "openai_model" "gpt4" {
 resource "openai_chat_completion" "example" {
   model = data.openai_model.gpt4.model_id
 
-  messages = [
-    {
-      role    = "system"
-      content = "You are a helpful assistant."
-    },
-    {
-      role    = "user"
-      content = "Write a haiku about Terraform."
-    }
-  ]
+  messages {
+    role    = "system"
+    content = "You are a helpful assistant."
+  }
+  messages {
+    role    = "user"
+    content = "Write a haiku about Terraform."
+  }
 
   temperature = 0.7
   max_tokens  = 150

@@ -173,18 +173,18 @@ func (r *AssistantResource) Create(ctx context.Context, req resource.CreateReque
 		assistantReq.Name = &name
 	}
 
-	if (!plan.Description.IsNull()) {
+	if !plan.Description.IsNull() {
 		description := plan.Description.ValueString()
 		assistantReq.Description = &description
 	}
 
-	if (!plan.Instructions.IsNull()) {
+	if !plan.Instructions.IsNull() {
 		instructions := plan.Instructions.ValueString()
 		assistantReq.Instructions = &instructions
 	}
 
 	// Process tools if provided
-	if (!plan.Tools.IsNull()) {
+	if !plan.Tools.IsNull() {
 		var toolStrings []string
 		diags = plan.Tools.ElementsAs(ctx, &toolStrings, false)
 		resp.Diagnostics.Append(diags...)
@@ -201,7 +201,7 @@ func (r *AssistantResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	// Process metadata if provided
-	if (!plan.Metadata.IsNull()) {
+	if !plan.Metadata.IsNull() {
 		metadata := make(map[string]string)
 		diags := plan.Metadata.ElementsAs(ctx, &metadata, false)
 		resp.Diagnostics.Append(diags...)
@@ -212,7 +212,7 @@ func (r *AssistantResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	// Handle tool_resources if provided
-	if (plan.ToolResources != nil) {
+	if plan.ToolResources != nil {
 		toolResources, diags := convertToolResourcesToOpenAI(ctx, plan.ToolResources)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -641,7 +641,7 @@ func convertToolResourcesToOpenAI(ctx context.Context, toolResourcesAttr *Assist
 		}
 	}
 
-	if (!hasResources) {
+	if !hasResources {
 		return nil, diags
 	}
 

@@ -59,7 +59,7 @@ type ThreadToolResourcesCodeInterpreterModel struct {
 }
 
 type ThreadToolResourcesFileSearchModel struct {
-	VectorStoreIDs []string `tfsdk:"vector_store_ids"`
+	VectorStoreIDs types.Set `tfsdk:"vector_store_ids"`
 }
 
 // Schema returns the schema for this resource.
@@ -111,7 +111,7 @@ func (r *ThreadResource) Schema(ctx context.Context, req resource.SchemaRequest,
 					"file_search": schema.SingleNestedBlock{
 						MarkdownDescription: "Resources for the file search tool.",
 						Attributes: map[string]schema.Attribute{
-							"vector_store_ids": schema.ListAttribute{
+							"vector_store_ids": schema.SetAttribute{
 								MarkdownDescription: "Vector store IDs available to the file search tool.",
 								ElementType:         types.StringType,
 								Optional:            true,
@@ -224,6 +224,7 @@ func (r *ThreadResource) Create(ctx context.Context, req resource.CreateRequest,
 	// Update the state
 	plan.ID = types.StringValue(thread.ID)
 	plan.CreatedAt = types.Int64Value(int64(thread.CreatedAt))
+	plan.Object = types.StringValue(thread.Object)
 
 	// Handle metadata in response
 	if thread.Metadata != nil {
@@ -297,6 +298,7 @@ func (r *ThreadResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	// Update the state with the latest values
 	state.CreatedAt = types.Int64Value(int64(thread.CreatedAt))
+	state.Object = types.StringValue(thread.Object)
 
 	// Convert metadata
 	if thread.Metadata != nil {
@@ -392,6 +394,7 @@ func (r *ThreadResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	// Update the state
 	plan.CreatedAt = types.Int64Value(int64(thread.CreatedAt))
+	plan.Object = types.StringValue(thread.Object)
 
 	// Handle metadata in response
 	if thread.Metadata != nil {
@@ -476,7 +479,7 @@ func convertTerraformToolResourcesToOpenAI(ctx context.Context, toolResources ty
 	// Handle code_interpreter
 	if codeInterpreter, ok := val["code_interpreter"].(types.Object); ok && !codeInterpreter.IsNull() {
 		attrs := codeInterpreter.Attributes()
-		if fileIDs, ok := attrs["file_ids"].(types.List); ok && !fileIDs.IsNull() {
+		if fileIDs, ok := attrs["file_ids"].(types.Set); ok && !fileIDs.IsNull() {
 			var ids []string
 			diags.Append(fileIDs.ElementsAs(ctx, &ids, false)...)
 			if diags.HasError() {
@@ -493,7 +496,7 @@ func convertTerraformToolResourcesToOpenAI(ctx context.Context, toolResources ty
 	// Handle file_search
 	if fileSearch, ok := val["file_search"].(types.Object); ok && !fileSearch.IsNull() {
 		attrs := fileSearch.Attributes()
-		if vectorStoreIDs, ok := attrs["vector_store_ids"].(types.List); ok && !vectorStoreIDs.IsNull() {
+		if vectorStoreIDs, ok := attrs["vector_store_ids"].(types.Set); ok && !vectorStoreIDs.IsNull() {
 			var ids []string
 			diags.Append(vectorStoreIDs.ElementsAs(ctx, &ids, false)...)
 			if diags.HasError() {
@@ -518,14 +521,14 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 	attrTypes := map[string]attr.Type{
 		"code_interpreter": types.ObjectType{
 			AttrTypes: map[string]attr.Type{
-				"file_ids": types.ListType{
+				"file_ids": types.SetType{
 					ElemType: types.StringType,
 				},
 			},
 		},
 		"file_search": types.ObjectType{
 			AttrTypes: map[string]attr.Type{
-				"vector_store_ids": types.ListType{
+				"vector_store_ids": types.SetType{
 					ElemType: types.StringType,
 				},
 			},
@@ -540,12 +543,12 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 	// Build the object value starting with empty objects for both tools
 	attrs := map[string]attr.Value{
 		"code_interpreter": types.ObjectNull(map[string]attr.Type{
-			"file_ids": types.ListType{
+			"file_ids": types.SetType{
 				ElemType: types.StringType,
 			},
 		}),
 		"file_search": types.ObjectNull(map[string]attr.Type{
-			"vector_store_ids": types.ListType{
+			"vector_store_ids": types.SetType{
 				ElemType: types.StringType,
 			},
 		}),
@@ -553,7 +556,12 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 
 	// Update code_interpreter if present in response
 	if toolResources.CodeInterpreter != nil {
-		fileIDsVal, d := types.ListValueFrom(ctx, types.StringType, toolResources.CodeInterpreter.FileIDs)
+		// Sort file IDs for consistency
+		sortedFileIDs := make([]string, len(toolResources.CodeInterpreter.FileIDs))
+		copy(sortedFileIDs, toolResources.CodeInterpreter.FileIDs)
+		sort.Strings(sortedFileIDs)
+
+		fileIDsVal, d := types.SetValueFrom(ctx, types.StringType, sortedFileIDs)
 		diags.Append(d...)
 		if diags.HasError() {
 			return types.ObjectNull(attrTypes), diags
@@ -561,7 +569,7 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 
 		attrs["code_interpreter"], d = types.ObjectValue(
 			map[string]attr.Type{
-				"file_ids": types.ListType{
+				"file_ids": types.SetType{
 					ElemType: types.StringType,
 				},
 			},
@@ -577,7 +585,12 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 
 	// Update file_search if present in response
 	if toolResources.FileSearch != nil {
-		vectorStoreIDsVal, d := types.ListValueFrom(ctx, types.StringType, toolResources.FileSearch.VectorStoreIDs)
+		// Sort vector store IDs for consistency
+		sortedVectorStoreIDs := make([]string, len(toolResources.FileSearch.VectorStoreIDs))
+		copy(sortedVectorStoreIDs, toolResources.FileSearch.VectorStoreIDs)
+		sort.Strings(sortedVectorStoreIDs)
+
+		vectorStoreIDsVal, d := types.SetValueFrom(ctx, types.StringType, sortedVectorStoreIDs)
 		diags.Append(d...)
 		if diags.HasError() {
 			return types.ObjectNull(attrTypes), diags
@@ -585,7 +598,7 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 
 		attrs["file_search"], d = types.ObjectValue(
 			map[string]attr.Type{
-				"vector_store_ids": types.ListType{
+				"vector_store_ids": types.SetType{
 					ElemType: types.StringType,
 				},
 			},
@@ -624,7 +637,7 @@ func convertTerraformToolResourcesToOpenAIRequest(ctx context.Context, toolResou
 		if codeInterpreterObj, ok := codeInterpreterVal.(types.Object); ok && !codeInterpreterObj.IsNull() && !codeInterpreterObj.IsUnknown() {
 			attrs := codeInterpreterObj.Attributes()
 			if attrs != nil {
-				if fileIDs, ok := attrs["file_ids"].(types.List); ok && !fileIDs.IsNull() && !fileIDs.IsUnknown() {
+				if fileIDs, ok := attrs["file_ids"].(types.Set); ok && !fileIDs.IsNull() && !fileIDs.IsUnknown() {
 					var ids []string
 					diags.Append(fileIDs.ElementsAs(ctx, &ids, false)...)
 					if diags.HasError() {
@@ -643,7 +656,7 @@ func convertTerraformToolResourcesToOpenAIRequest(ctx context.Context, toolResou
 		if fileSearchObj, ok := fileSearchVal.(types.Object); ok && !fileSearchObj.IsNull() && !fileSearchObj.IsUnknown() {
 			attrs := fileSearchObj.Attributes()
 			if attrs != nil {
-				if vectorStoreIDs, ok := attrs["vector_store_ids"].(types.List); ok && !vectorStoreIDs.IsNull() && !vectorStoreIDs.IsUnknown() {
+				if vectorStoreIDs, ok := attrs["vector_store_ids"].(types.Set); ok && !vectorStoreIDs.IsNull() && !vectorStoreIDs.IsUnknown() {
 					var ids []string
 					diags.Append(vectorStoreIDs.ElementsAs(ctx, &ids, false)...)
 					if diags.HasError() {

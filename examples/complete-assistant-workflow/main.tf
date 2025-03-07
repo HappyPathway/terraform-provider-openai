@@ -80,11 +80,11 @@ resource "openai_assistant" "data_analyst" {
   tool_resources {
     # Code interpreter block is optional
     code_interpreter {
-      file_ids = [
+      file_ids = toset([
         openai_file.data_file.id,
         openai_file.secondary_data_file.id,
         openai_file.code_file.id
-      ]
+      ])
     }
   }
 
@@ -113,7 +113,7 @@ resource "openai_thread" "analysis_session" {
       vector_store_ids = [openai_vector_store.analysis_store.id]
     }
     code_interpreter {
-      file_ids = [openai_file.code_file.id]
+      file_ids = toset([openai_file.code_file.id])
     }
   }
 }
@@ -141,7 +141,7 @@ resource "openai_thread" "analysis_session_code_interpreter" {
   # Configure the thread to use the vector store for semantic search
   tool_resources {
     code_interpreter {
-      file_ids = [openai_file.code_file.id]
+      file_ids = toset([openai_file.code_file.id])
     }
   }
 }
@@ -160,10 +160,10 @@ resource "openai_message" "initial_message" {
   role      = "user"
   content   = "Please analyze the data in data.json using the provided analysis.py script."
 
-  attachment {
-    file_id = openai_file.data_file.id
-    tools   = ["code_interpreter"]
-  }
+  # attachment {
+  #   file_id = openai_file.data_file.id
+  #   tools   = ["code_interpreter"]
+  # }
 }
 
 # Output vector store information for reference

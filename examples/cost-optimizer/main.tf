@@ -21,8 +21,8 @@ resource "openai_file" "savings_strategies" {
 
 # Create a cost optimization assistant
 resource "openai_assistant" "cost_optimizer" {
-  name  = "Infrastructure Cost Optimizer"
-  model = "gpt-4-turbo-preview"
+  name         = "Infrastructure Cost Optimizer"
+  model        = "gpt-4-turbo-preview"
   instructions = <<-EOT
     You are a specialized infrastructure cost optimization assistant.
     Your responsibilities include:
@@ -50,15 +50,15 @@ resource "openai_assistant" "cost_optimizer" {
     }
   ]
 
-  tool_resources = {
-    code_interpreter = {
+  tool_resources {
+    code_interpreter {
       # Files that can be used for calculations and analysis
       file_ids = [
         openai_file.pricing_data.id,
         openai_file.cost_guidelines.id
       ]
     }
-    file_search = {
+    file_search {
       # Files available for semantic search
       vector_store_ids = [
         openai_file.cost_guidelines.id,
@@ -103,14 +103,14 @@ resource "openai_thread" "cost_analysis" {
   }
 
   # Initialize thread with access to all cost-related resources
-  tool_resources = {
-    code_interpreter = {
+  tool_resources {
+    code_interpreter {
       file_ids = [
         openai_file.pricing_data.id,
         openai_file.cost_guidelines.id
       ]
     }
-    file_search = {
+    file_search {
       vector_store_ids = [
         openai_file.cost_guidelines.id,
         openai_file.pricing_data.id,
@@ -122,9 +122,9 @@ resource "openai_thread" "cost_analysis" {
 
 # Request cost analysis
 resource "openai_message" "cost_analysis_request" {
-  thread_id = openai_thread.cost_analysis.id
-  role      = "user"
-  content   = <<-EOT
+  thread_id    = openai_thread.cost_analysis.id
+  role         = "user"
+  content      = <<-EOT
     Please analyze the following infrastructure configuration for cost optimization opportunities.
     Our target monthly budget is $${var.budget_target} for the ${var.environment} environment.
     
@@ -141,25 +141,7 @@ resource "openai_message" "cost_analysis_request" {
     4. Implementation plan prioritized by impact
     5. Long-term cost optimization strategies
   EOT
-
-  # Attach relevant files for the analysis
-  attachments = [
-    {
-      file_id = openai_file.pricing_data.id
-      tools   = ["file_search", "code_interpreter"]
-    },
-    {
-      file_id = openai_file.cost_guidelines.id
-      tools   = ["file_search", "code_interpreter"]
-    },
-    {
-      file_id = openai_file.savings_strategies.id
-      tools   = ["file_search"]
-    }
-  ]
-
-  wait_for_response = true
-  assistant_id      = openai_assistant.cost_optimizer.id
+  assistant_id = openai_assistant.cost_optimizer.id
 }
 
 # Outputs
