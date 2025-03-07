@@ -11,3 +11,11 @@ resource "openai_thread" "analysis_session" {
     }
   }
 }
+
+# Create a thread without tools
+resource "openai_thread" "analysis_session_no_tools" {
+  metadata = {
+    session_type = "data_analysis"
+    project      = "example"
+  }
+}

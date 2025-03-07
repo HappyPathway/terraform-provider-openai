@@ -3,6 +3,7 @@ package resources
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/darnold/terraform-provider-openai/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -53,7 +54,7 @@ type AssistantToolResourcesModel struct {
 }
 
 type AssistantToolResourcesCodeInterpreterModel struct {
-	FileIDs []string `tfsdk:"file_ids"`
+	FileIDs types.Set `tfsdk:"file_ids"`
 }
 
 type AssistantToolResourcesFileSearchModel struct {
@@ -615,10 +616,19 @@ func convertToolResourcesToOpenAI(ctx context.Context, toolResourcesAttr *Assist
 	}
 
 	// Only include code_interpreter if it has file IDs
-	if toolResourcesAttr.CodeInterpreter != nil && len(toolResourcesAttr.CodeInterpreter.FileIDs) > 0 {
+	if toolResourcesAttr.CodeInterpreter != nil && !toolResourcesAttr.CodeInterpreter.FileIDs.IsNull() {
 		hasResources = true
+		var fileIDs []string
+		diags.Append(toolResourcesAttr.CodeInterpreter.FileIDs.ElementsAs(ctx, &fileIDs, false)...)
+		if diags.HasError() {
+			return nil, diags
+		}
+
+		// Sort file IDs for consistency
+		sort.Strings(fileIDs)
+
 		toolResources.CodeInterpreter = &openai.AssistantToolCodeInterpreter{
-			FileIDs: toolResourcesAttr.CodeInterpreter.FileIDs,
+			FileIDs: fileIDs,
 		}
 	}
 
@@ -651,8 +661,19 @@ func convertOpenAIToolResourcesToTerraform(ctx context.Context, toolResources *o
 	// Only convert code_interpreter if it has file IDs
 	if toolResources.CodeInterpreter != nil && len(toolResources.CodeInterpreter.FileIDs) > 0 {
 		hasResources = true
+		// Sort file IDs for consistency
+		sortedFileIDs := make([]string, len(toolResources.CodeInterpreter.FileIDs))
+		copy(sortedFileIDs, toolResources.CodeInterpreter.FileIDs)
+		sort.Strings(sortedFileIDs)
+
+		fileIDSet, d := types.SetValueFrom(ctx, types.StringType, sortedFileIDs)
+		diags.Append(d...)
+		if diags.HasError() {
+			return nil, diags
+		}
+
 		tfToolResources.CodeInterpreter = &AssistantToolResourcesCodeInterpreterModel{
-			FileIDs: toolResources.CodeInterpreter.FileIDs,
+			FileIDs: fileIDSet,
 		}
 	}
 

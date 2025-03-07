@@ -1,3 +1,11 @@
+terraform {
+  required_providers {
+    openai = {
+      source = "happypathway/openai"
+    }
+  }
+}
+
 provider "openai" {}
 
 # Upload security scanning rules and compliance policies
@@ -21,8 +29,8 @@ resource "openai_file" "aws_best_practices" {
 
 # Create a compliance and security scanning assistant
 resource "openai_assistant" "security_scanner" {
-  name  = "Security and Compliance Scanner"
-  model = "gpt-4-turbo-preview"
+  name         = "Security and Compliance Scanner"
+  model        = "gpt-4-turbo-preview"
   instructions = <<-EOT
     You are a specialized security and compliance assistant for infrastructure code.
     Your responsibilities include:
@@ -69,11 +77,11 @@ resource "openai_assistant" "security_scanner" {
   }
 
   metadata = {
-    purpose       = "Security Scanning"
-    department    = "Security"
-    version       = "2.0"
-    last_updated  = "2024-04-17"
-    standards     = "CIS,NIST,SOC2"
+    purpose      = "Security Scanning"
+    department   = "Security"
+    version      = "2.0"
+    last_updated = "2024-04-17"
+    standards    = "CIS,NIST,SOC2"
   }
 }
 
@@ -86,9 +94,9 @@ variable "infrastructure_code" {
 # Create a thread for the security scanning session
 resource "openai_thread" "security_scan" {
   metadata = {
-    scan_type    = "security-and-compliance"
-    scan_level   = "detailed"
-    environment  = "production"
+    scan_type   = "security-and-compliance"
+    scan_level  = "detailed"
+    environment = "production"
   }
 
   # Initialize thread with tool resources
@@ -188,7 +196,7 @@ locals {
 # Example usage outputs
 output "usage_example" {
   description = "Example of how to use this configuration"
-  value = <<-EOT
+  value       = <<-EOT
     # Apply this configuration with:
     terraform apply -var="infrastructure_code=${local.example_config}"
 

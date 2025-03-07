@@ -32,94 +32,82 @@ type MessageResource struct {
 
 // MessageResourceModel describes the resource data model.
 type MessageResourceModel struct {
-	ID              types.String `tfsdk:"id"`
-	ThreadID        types.String `tfsdk:"thread_id"`
-	Role            types.String `tfsdk:"role"`
-	Content         types.String `tfsdk:"content"`
-	AssistantID     types.String `tfsdk:"assistant_id"`
-	FileIDs         types.List   `tfsdk:"file_ids"`
-	Metadata        types.Map    `tfsdk:"metadata"`
-	ObjectID        types.String `tfsdk:"object_id"`
-	CreatedAt       types.Int64  `tfsdk:"created_at"`
-	ResponseContent types.String `tfsdk:"response_content"`
-	WaitForResponse types.Bool   `tfsdk:"wait_for_response"`
-	RunID           types.String `tfsdk:"run_id"`
-	Attachments     types.List   `tfsdk:"attachments"`
+	ID          types.String `tfsdk:"id"`
+	ThreadID    types.String `tfsdk:"thread_id"`
+	Role        types.String `tfsdk:"role"`
+	Content     types.String `tfsdk:"content"`
+	FileIDs     types.List   `tfsdk:"file_ids"`
+	Metadata    types.Map    `tfsdk:"metadata"`
+	CreatedAt   types.Int64  `tfsdk:"created_at"`
+	Object      types.String `tfsdk:"object"`
+	AssistantID types.String `tfsdk:"assistant_id"`
+	Attachments types.List   `tfsdk:"attachments"`
 }
 
-func (r *MessageResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		MarkdownDescription: "Create and manage messages within OpenAI Assistant threads.",
+// AttachmentModel represents a file attachment in a message
+type AttachmentModel struct {
+	FileID types.String `tfsdk:"file_id"`
+	Tools  types.List   `tfsdk:"tools"`
+}
 
+func (r *MessageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		MarkdownDescription: "Creates and manages individual messages within OpenAI Threads. Messages are the building blocks of conversations between users and assistants.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
+				MarkdownDescription: "The OpenAI-assigned ID for this message.",
 				Computed:            true,
-				MarkdownDescription: "Unique identifier for this resource.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"thread_id": schema.StringAttribute{
-				MarkdownDescription: "The ID of the thread to create the message in.",
+				MarkdownDescription: "The ID of the thread to add the message to.",
 				Required:            true,
 			},
 			"role": schema.StringAttribute{
-				MarkdownDescription: "The role of the message author. Currently only 'user' is supported.",
+				MarkdownDescription: "The role of the message author. Can be \"user\" or \"assistant\".",
 				Required:            true,
-				// In a future version, this could be validated to only allow 'user'
 			},
 			"content": schema.StringAttribute{
 				MarkdownDescription: "The content of the message.",
 				Required:            true,
 			},
-			"assistant_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the assistant to use for generating a response. If provided, a run will be created.",
-				Optional:            true,
-			},
 			"file_ids": schema.ListAttribute{
+				MarkdownDescription: "A list of file IDs to attach to the message. These files must already be uploaded with purpose \"assistants\".",
 				ElementType:         types.StringType,
-				MarkdownDescription: "A list of file IDs to attach to this message. Files can be uploaded using the `openai_file` resource.",
 				Optional:            true,
 			},
 			"metadata": schema.MapAttribute{
+				MarkdownDescription: "Set of key-value pairs that can be used to store additional information about the message.",
 				ElementType:         types.StringType,
-				MarkdownDescription: "Metadata in key-value pairs to attach to the message.",
 				Optional:            true,
-			},
-			"object_id": schema.StringAttribute{
-				MarkdownDescription: "The OpenAI ID assigned to this message.",
-				Computed:            true,
 			},
 			"created_at": schema.Int64Attribute{
 				MarkdownDescription: "The Unix timestamp (in seconds) for when the message was created.",
 				Computed:            true,
 			},
-			"wait_for_response": schema.BoolAttribute{
-				MarkdownDescription: "Whether to wait for the assistant to respond after sending the message. Requires assistant_id to be set.",
-				Optional:            true,
-			},
-			"response_content": schema.StringAttribute{
-				MarkdownDescription: "If wait_for_response is true, this will contain the assistant's response message content.",
+			"object": schema.StringAttribute{
+				MarkdownDescription: "The object type, always \"thread.message\".",
 				Computed:            true,
 			},
-			"run_id": schema.StringAttribute{
-				MarkdownDescription: "If assistant_id is provided, this will contain the ID of the run created to generate the response.",
+			"assistant_id": schema.StringAttribute{
+				MarkdownDescription: "If applicable, the ID of the assistant that created the message.",
 				Computed:            true,
-				Optional:            true,
 			},
 			"attachments": schema.ListNestedAttribute{
+				MarkdownDescription: "A list of files to attach to the message with their associated tools.",
 				Optional:            true,
-				MarkdownDescription: "Files to attach to the message. The files will be added to the thread's tool_resources.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"file_id": schema.StringAttribute{
 							Required:            true,
-							MarkdownDescription: "ID of the file to attach.",
+							MarkdownDescription: "The ID of the file to attach.",
 						},
 						"tools": schema.ListAttribute{
 							Required:            true,
 							ElementType:         types.StringType,
-							MarkdownDescription: "List of tools that can use this file. Can be 'code_interpreter' and/or 'file_search'.",
+							MarkdownDescription: "List of tools that can use this file. Can be \"code_interpreter\" and/or \"retrieve\".",
 						},
 					},
 				},
@@ -148,92 +136,76 @@ func (r *MessageResource) Configure(ctx context.Context, req resource.ConfigureR
 func (r *MessageResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan MessageResourceModel
 
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	threadID := plan.ThreadID.ValueString()
-	if threadID == "" {
-		resp.Diagnostics.AddError(
-			"Error Creating Message",
-			"Thread ID is required to create a message.",
-		)
 		return
 	}
 
 	// Create the message request
 	messageReq := openai.MessageRequest{
-		Role:     plan.Role.ValueString(),
-		Content:  plan.Content.ValueString(),
-		Metadata: make(map[string]interface{}),
+		Role:    plan.Role.ValueString(),
+		Content: plan.Content.ValueString(),
 	}
 
-	// Process file IDs if provided
+	// Add file IDs if specified
 	if !plan.FileIDs.IsNull() {
 		var fileIDs []string
-		diags := plan.FileIDs.ElementsAs(ctx, &fileIDs, false)
-		resp.Diagnostics.Append(diags...)
+		resp.Diagnostics.Append(plan.FileIDs.ElementsAs(ctx, &fileIDs, false)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		messageReq.FileIds = fileIDs // Changed from FileIDs to FileIds
+		messageReq.FileIds = fileIDs
 	}
 
-	// Process metadata if provided
+	// Add metadata if specified
 	if !plan.Metadata.IsNull() {
 		metadata := make(map[string]string)
-		diags := plan.Metadata.ElementsAs(ctx, &metadata, false)
-		resp.Diagnostics.Append(diags...)
+		resp.Diagnostics.Append(plan.Metadata.ElementsAs(ctx, &metadata, false)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 
-		// Convert from map[string]string to map[string]any
-		metadataAny := make(map[string]any)
+		// Convert from map[string]string to map[string]interface{}
+		metadataAny := make(map[string]interface{})
 		for k, v := range metadata {
 			metadataAny[k] = v
 		}
 		messageReq.Metadata = metadataAny
 	}
 
-	// Process attachments if provided
+	// Add attachments if specified
 	if !plan.Attachments.IsNull() {
-		var attachments []map[string]interface{}
-		diags := plan.Attachments.ElementsAs(ctx, &attachments, false)
-		resp.Diagnostics.Append(diags...)
+		var attachments []AttachmentModel
+		resp.Diagnostics.Append(plan.Attachments.ElementsAs(ctx, &attachments, false)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 
 		messageAttachments := make([]openai.ThreadAttachment, 0, len(attachments))
 		for _, attachment := range attachments {
-			fileID := attachment["file_id"].(string)
-			toolsList := attachment["tools"].([]string)
+			var tools []string
+			resp.Diagnostics.Append(attachment.Tools.ElementsAs(ctx, &tools, false)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
 
-			tools := make([]openai.ThreadAttachmentTool, 0, len(toolsList))
-			for _, tool := range toolsList {
-				tools = append(tools, openai.ThreadAttachmentTool{
+			threadTools := make([]openai.ThreadAttachmentTool, 0, len(tools))
+			for _, tool := range tools {
+				threadTools = append(threadTools, openai.ThreadAttachmentTool{
 					Type: tool,
 				})
 			}
 
 			messageAttachments = append(messageAttachments, openai.ThreadAttachment{
-				FileID: fileID,
-				Tools:  tools,
+				FileID: attachment.FileID.ValueString(),
+				Tools:  threadTools,
 			})
 		}
 		messageReq.Attachments = messageAttachments
 	}
 
-	tflog.Debug(ctx, "Creating message", map[string]interface{}{
-		"thread_id": threadID,
-		"role":      messageReq.Role,
-	})
-
 	// Create the message
-	message, err := r.client.OpenAI.CreateMessage(ctx, threadID, messageReq)
+	message, err := r.client.OpenAI.CreateMessage(ctx, plan.ThreadID.ValueString(), messageReq)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Message",
@@ -242,98 +214,20 @@ func (r *MessageResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	// Run the assistant if required
-	var runID string
-	var responseContent string
-
-	if !plan.AssistantID.IsNull() {
-		assistantID := plan.AssistantID.ValueString()
-		waitForResponse := false
-
-		if !plan.WaitForResponse.IsNull() {
-			waitForResponse = plan.WaitForResponse.ValueBool()
-		}
-
-		// Create a run
-		runReq := openai.RunRequest{
-			AssistantID: assistantID,
-		}
-
-		tflog.Debug(ctx, "Creating run with assistant", map[string]interface{}{
-			"thread_id":    threadID,
-			"assistant_id": assistantID,
-		})
-
-		run, err := r.client.OpenAI.CreateRun(ctx, threadID, runReq)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error Creating Run",
-				fmt.Sprintf("Unable to create run with assistant: %s", r.client.HandleError(err)),
-			)
-			return
-		}
-
-		runID = run.ID
-
-		// If requested, wait for the assistant to respond
-		if waitForResponse {
-			tflog.Debug(ctx, "Waiting for assistant response", map[string]interface{}{
-				"run_id": runID,
-			})
-
-			// Poll for run completion
-			completedRun, err := r.waitForRunCompletion(ctx, threadID, runID)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					"Error Waiting for Run Completion",
-					fmt.Sprintf("Unable to get assistant response: %s", r.client.HandleError(err)),
-				)
-				return
-			}
-
-			if completedRun.Status == "completed" {
-				// Get the assistant's response by retrieving the last message directly
-				lastMessage, err := r.client.OpenAI.RetrieveMessage(ctx, threadID, message.ID)
-				if err != nil {
-					resp.Diagnostics.AddError(
-						"Error Retrieving Assistant Response",
-						fmt.Sprintf("Unable to get assistant response message: %s", r.client.HandleError(err)),
-					)
-					return
-				}
-
-				// Get message content
-				if lastMessage.Role == "assistant" && len(lastMessage.Content) > 0 {
-					responseContent = lastMessage.Content[0].Text.Value
-				}
-			} else {
-				resp.Diagnostics.AddWarning(
-					"Assistant Run Did Not Complete Successfully",
-					fmt.Sprintf("Run completed with status: %s", completedRun.Status),
-				)
-			}
-		}
-	}
-
 	// Update the state
 	plan.ID = types.StringValue(message.ID)
-	plan.ObjectID = types.StringValue(message.ID)
+	plan.Object = types.StringValue(message.Object)
 	plan.CreatedAt = types.Int64Value(int64(message.CreatedAt))
 
-	if runID != "" {
-		plan.RunID = types.StringValue(runID)
+	// Ensure assistant_id is always set, even if null
+	if message.AssistantID != nil {
+		plan.AssistantID = types.StringValue(*message.AssistantID)
+	} else {
+		plan.AssistantID = types.StringNull()
 	}
 
-	if responseContent != "" {
-		plan.ResponseContent = types.StringValue(responseContent)
-	}
-
-	// Save into state
-	diags = resp.State.Set(ctx, plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	// Save the state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 func (r *MessageResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -344,7 +238,7 @@ func (r *MessageResource) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 
 	threadID := state.ThreadID.ValueString()
-	messageID := state.ObjectID.ValueString()
+	messageID := state.ID.ValueString()
 	if threadID == "" || messageID == "" {
 		resp.Diagnostics.AddError(
 			"Error Reading Message",
@@ -374,9 +268,17 @@ func (r *MessageResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	// Update the state with the latest values
+	// Update state with latest values
 	state.Role = types.StringValue(message.Role)
 	state.CreatedAt = types.Int64Value(int64(message.CreatedAt))
+	state.Object = types.StringValue(message.Object)
+
+	// Always set assistant_id, even if null
+	if message.AssistantID != nil {
+		state.AssistantID = types.StringValue(*message.AssistantID)
+	} else {
+		state.AssistantID = types.StringNull()
+	}
 
 	// Set content from the first content item if available
 	if len(message.Content) > 0 && message.Content[0].Type == "text" {
@@ -384,18 +286,20 @@ func (r *MessageResource) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 
 	// Convert file IDs
-	if len(message.FileIds) > 0 { // Changed from FileIDs to FileIds
+	if len(message.FileIds) > 0 {
 		fileIDsList, diags := types.ListValueFrom(ctx, types.StringType, message.FileIds)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 		state.FileIDs = fileIDsList
+	} else {
+		state.FileIDs = types.ListNull(types.StringType)
 	}
 
 	// Convert metadata
 	if message.Metadata != nil {
-		// Convert from map[string]any to map[string]string for Terraform state
+		// Convert from map[string]interface{} to map[string]string for Terraform state
 		metadataStr := make(map[string]string)
 		for k, v := range message.Metadata {
 			if strValue, ok := v.(string); ok {
@@ -411,9 +315,11 @@ func (r *MessageResource) Read(ctx context.Context, req resource.ReadRequest, re
 			return
 		}
 		state.Metadata = metadataMap
+	} else {
+		state.Metadata = types.MapNull(types.StringType)
 	}
 
-	// Save into state
+	// Save state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -434,7 +340,7 @@ func (r *MessageResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	threadID := state.ThreadID.ValueString()
-	messageID := state.ObjectID.ValueString()
+	messageID := state.ID.ValueString()
 	if threadID == "" || messageID == "" {
 		resp.Diagnostics.AddError(
 			"Error Updating Message",
@@ -473,8 +379,8 @@ func (r *MessageResource) Update(ctx context.Context, req resource.UpdateRequest
 			return
 		}
 
-		// Convert from map[string]string to map[string]any
-		metadata := make(map[string]any)
+		// Convert from map[string]string to map[string]interface{}
+		metadata := make(map[string]interface{})
 		for k, v := range metadataStr {
 			metadata[k] = v
 		}
@@ -528,12 +434,8 @@ func (r *MessageResource) Update(ctx context.Context, req resource.UpdateRequest
 		plan.Content = types.StringValue(message.Content[0].Text.Value)
 	}
 
-	plan.ObjectID = types.StringValue(message.ID)
+	plan.Object = types.StringValue(message.Object)
 	plan.CreatedAt = types.Int64Value(int64(message.CreatedAt))
-
-	// Preserve run-related fields that shouldn't change on update
-	plan.ResponseContent = state.ResponseContent
-	plan.RunID = state.RunID
 
 	// Save into state
 	diags = resp.State.Set(ctx, plan)
@@ -551,7 +453,7 @@ func (r *MessageResource) Delete(ctx context.Context, req resource.DeleteRequest
 	}
 
 	threadID := state.ThreadID.ValueString()
-	messageID := state.ObjectID.ValueString()
+	messageID := state.ID.ValueString()
 	if threadID == "" || messageID == "" {
 		// Nothing to delete
 		return

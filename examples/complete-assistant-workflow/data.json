@@ -1,0 +1,34 @@
+{
+  "records": [
+    {
+      "date": "2024-01-01",
+      "revenue": 10000,
+      "expenses": 7500,
+      "profit": 2500
+    },
+    {
+      "date": "2024-01-02",
+      "revenue": 12000,
+      "expenses": 8000,
+      "profit": 4000
+    },
+    {
+      "date": "2024-01-03",
+      "revenue": 9500,
+      "expenses": 7000,
+      "profit": 2500
+    },
+    {
+      "date": "2024-01-04",
+      "revenue": 11000,
+      "expenses": 7800,
+      "profit": 3200
+    },
+    {
+      "date": "2024-01-05",
+      "revenue": 13500,
+      "expenses": 8500,
+      "profit": 5000
+    }
+  ]
+}

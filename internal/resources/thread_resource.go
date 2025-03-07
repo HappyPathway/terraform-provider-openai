@@ -58,7 +58,6 @@ func (r *ThreadResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				ElementType:         types.StringType,
 				MarkdownDescription: "Metadata in key-value pairs to attach to the thread.",
 				Optional:            true,
-				Computed:            false,
 			},
 			"created_at": schema.Int64Attribute{
 				MarkdownDescription: "The Unix timestamp (in seconds) for when the thread was created.",
@@ -456,15 +455,7 @@ func convertTerraformToolResourcesToOpenAI(ctx context.Context, toolResources ty
 func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai.ToolResources) (types.Object, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	// Sort both file IDs and vector store IDs for consistency
-	if toolResources.CodeInterpreter != nil && len(toolResources.CodeInterpreter.FileIDs) > 0 {
-		sort.Strings(toolResources.CodeInterpreter.FileIDs)
-	}
-	if toolResources.FileSearch != nil && len(toolResources.FileSearch.VectorStoreIDs) > 0 {
-		sort.Strings(toolResources.FileSearch.VectorStoreIDs)
-	}
-
-	// Define the object type structure
+	// Define the object type structure for nested objects
 	attrTypes := map[string]attr.Type{
 		"code_interpreter": types.ObjectType{
 			AttrTypes: map[string]attr.Type{
@@ -480,6 +471,11 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 				},
 			},
 		},
+	}
+
+	// If no tool resources were present in the API response, return null
+	if toolResources == (openai.ToolResources{}) {
+		return types.ObjectNull(attrTypes), diags
 	}
 
 	// Build the object value
@@ -535,7 +531,7 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 		attrs["file_search"] = fileSearchVal
 	}
 
-	// If no tool resources were present, return null
+	// If no attributes were added, return null
 	if len(attrs) == 0 {
 		return types.ObjectNull(attrTypes), diags
 	}
@@ -546,40 +542,62 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 
 // Helper function to convert from Terraform tool_resources to OpenAI ToolResourcesRequest
 func convertTerraformToolResourcesToOpenAIRequest(ctx context.Context, toolResources types.Object) (*openai.ToolResourcesRequest, diag.Diagnostics) {
-	var result openai.ToolResourcesRequest
 	var diags diag.Diagnostics
 
+	// If tool_resources is null or empty, return nil
+	if toolResources.IsNull() || toolResources.IsUnknown() {
+		return nil, diags
+	}
+
 	val := toolResources.Attributes()
+	if val == nil || len(val) == 0 {
+		return nil, diags
+	}
+
+	result := &openai.ToolResourcesRequest{}
 
 	// Handle code_interpreter
-	if codeInterpreter, ok := val["code_interpreter"].(types.Object); ok && !codeInterpreter.IsNull() {
+	if codeInterpreter, ok := val["code_interpreter"].(types.Object); ok && !codeInterpreter.IsNull() && !codeInterpreter.IsUnknown() {
 		attrs := codeInterpreter.Attributes()
-		if fileIDs, ok := attrs["file_ids"].(types.List); ok && !fileIDs.IsNull() {
-			var ids []string
-			diags.Append(fileIDs.ElementsAs(ctx, &ids, false)...)
-			if diags.HasError() {
-				return nil, diags
-			}
-			result.CodeInterpreter = &openai.CodeInterpreterToolResourcesRequest{
-				FileIDs: ids,
+		if attrs != nil {
+			if fileIDs, ok := attrs["file_ids"].(types.List); ok && !fileIDs.IsNull() && !fileIDs.IsUnknown() {
+				var ids []string
+				diags.Append(fileIDs.ElementsAs(ctx, &ids, false)...)
+				if diags.HasError() {
+					return nil, diags
+				}
+				if len(ids) > 0 {
+					result.CodeInterpreter = &openai.CodeInterpreterToolResourcesRequest{
+						FileIDs: ids,
+					}
+				}
 			}
 		}
 	}
 
 	// Handle file_search
-	if fileSearch, ok := val["file_search"].(types.Object); ok && !fileSearch.IsNull() {
+	if fileSearch, ok := val["file_search"].(types.Object); ok && !fileSearch.IsNull() && !fileSearch.IsUnknown() {
 		attrs := fileSearch.Attributes()
-		if vectorStoreIDs, ok := attrs["vector_store_ids"].(types.List); ok && !vectorStoreIDs.IsNull() {
-			var ids []string
-			diags.Append(vectorStoreIDs.ElementsAs(ctx, &ids, false)...)
-			if diags.HasError() {
-				return nil, diags
-			}
-			result.FileSearch = &openai.FileSearchToolResourcesRequest{
-				VectorStoreIDs: ids,
+		if attrs != nil {
+			if vectorStoreIDs, ok := attrs["vector_store_ids"].(types.List); ok && !vectorStoreIDs.IsNull() && !vectorStoreIDs.IsUnknown() {
+				var ids []string
+				diags.Append(vectorStoreIDs.ElementsAs(ctx, &ids, false)...)
+				if diags.HasError() {
+					return nil, diags
+				}
+				if len(ids) > 0 {
+					result.FileSearch = &openai.FileSearchToolResourcesRequest{
+						VectorStoreIDs: ids,
+					}
+				}
 			}
 		}
 	}
 
-	return &result, diags
+	// If no tools were configured, return nil
+	if result.CodeInterpreter == nil && result.FileSearch == nil {
+		return nil, diags
+	}
+
+	return result, diags
 }

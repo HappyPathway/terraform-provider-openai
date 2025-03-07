@@ -1,9 +1,14 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import json
 
 def analyze_data(data_path):
-    # Read the CSV file
-    df = pd.read_csv(data_path)
+    # Read the JSON file
+    with open(data_path) as f:
+        data = json.load(f)
+    
+    # Convert to DataFrame
+    df = pd.DataFrame(data['records'])
     
     # Calculate basic statistics
     stats = {

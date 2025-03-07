@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/sashabaranov/go-openai"
@@ -63,10 +64,13 @@ func (r *VectorStoreFileResource) Schema(_ context.Context, _ resource.SchemaReq
 				},
 			},
 			"file_id": schema.StringAttribute{
-				MarkdownDescription: "The ID of the file to add to the vector store.",
+				MarkdownDescription: "The ID of the file to add to the vector store. **Note:** CSV files are not supported.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					fileTypeValidator{},
 				},
 			},
 			"created_at": schema.Int64Attribute{
@@ -82,6 +86,29 @@ func (r *VectorStoreFileResource) Schema(_ context.Context, _ resource.SchemaReq
 				Computed:            true,
 			},
 		},
+	}
+}
+
+// fileTypeValidator validates that the file is not a CSV file
+type fileTypeValidator struct{}
+
+func (v fileTypeValidator) Description(_ context.Context) string {
+	return "file must not be a CSV file"
+}
+
+func (v fileTypeValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v fileTypeValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	// For now, we can only validate by looking at the file_id suffix
+	// In the future, we may want to make an API call to check the file's actual content type
+	if req.ConfigValue.ValueString() != "" && strings.HasSuffix(strings.ToLower(req.ConfigValue.ValueString()), ".csv") {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid File Type",
+			"CSV files are not supported for vector store retrieval. See https://platform.openai.com/docs/assistants/tools/file-search/supported-files",
+		)
 	}
 }
 
