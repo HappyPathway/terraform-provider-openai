@@ -51,7 +51,29 @@ func (r *VectorStoreResource) Schema(_ context.Context, _ resource.SchemaRequest
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages an OpenAI vector store for efficient embedding storage and retrieval.",
 
+		Blocks: map[string]schema.Block{
+			"expires_after": schema.SingleNestedBlock{
+				MarkdownDescription: "Configuration for vector store expiration.",
+				Blocks:              map[string]schema.Block{},
+				Attributes: map[string]schema.Attribute{
+					"days": schema.Int64Attribute{
+						MarkdownDescription: "Number of days after which the vector store expires.",
+						Required:            true,
+					},
+					"anchor": schema.StringAttribute{
+						MarkdownDescription: "Reference time for expiration calculation.",
+						Optional:            true,
+					},
+				},
+			},
+		},
+
 		Attributes: map[string]schema.Attribute{
+			"metadata": schema.MapAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				MarkdownDescription: "Metadata key-value pairs for the vector store.",
+			},
 			"id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the vector store.",
 				Computed:            true,
@@ -78,25 +100,6 @@ func (r *VectorStoreResource) Schema(_ context.Context, _ resource.SchemaRequest
 			"expires_at": schema.Int64Attribute{
 				MarkdownDescription: "The timestamp when the vector store will expire.",
 				Computed:            true,
-			},
-			"expires_after": schema.SingleNestedAttribute{
-				MarkdownDescription: "Configuration for vector store expiration.",
-				Optional:            true,
-				Attributes: map[string]schema.Attribute{
-					"days": schema.Int64Attribute{
-						MarkdownDescription: "Number of days after which the vector store expires.",
-						Required:            true,
-					},
-					"anchor": schema.StringAttribute{
-						MarkdownDescription: "Reference time for expiration calculation.",
-						Optional:            true,
-					},
-				},
-			},
-			"metadata": schema.MapAttribute{
-				MarkdownDescription: "Metadata key-value pairs for the vector store.",
-				Optional:            true,
-				ElementType:         types.StringType,
 			},
 		},
 	}

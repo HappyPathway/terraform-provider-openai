@@ -118,7 +118,6 @@ output "vector_store_info" {
     id          = openai_vector_store.analysis_store.id
     name        = openai_vector_store.analysis_store.name
     status      = openai_vector_store.analysis_store.status
-    file_counts = openai_vector_store.analysis_store.file_counts
     usage_bytes = openai_vector_store.analysis_store.usage_bytes
   }
   description = "Information about the vector store and its contents"
