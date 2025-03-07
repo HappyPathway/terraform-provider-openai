@@ -68,7 +68,7 @@ type ChatCompletionUsageModel struct {
 	TotalTokens      types.Int64 `tfsdk:"total_tokens"`
 }
 
-func (d *ChatCompletionDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *ChatCompletionDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_chat_completion"
 }
 

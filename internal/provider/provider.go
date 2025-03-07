@@ -149,6 +149,7 @@ func (p *OpenAIProvider) DataSources(_ context.Context) []func() datasource.Data
 		datasources.NewModelDataSource,
 		datasources.NewAssistantDataSource,
 		datasources.NewChatCompletionDataSource,
+		datasources.NewVectorStoreDataSource,
 	}
 }
 
@@ -162,5 +163,7 @@ func (p *OpenAIProvider) Resources(_ context.Context) []func() resource.Resource
 		resources.NewAssistantResource,
 		resources.NewThreadResource,
 		resources.NewMessageResource,
+		resources.NewVectorStoreResource,
+		resources.NewVectorStoreFileResource,
 	}
 }

@@ -75,7 +75,7 @@ func (r *AssistantResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 					"code_interpreter": schema.SingleNestedBlock{
 						MarkdownDescription: "Resources for the code interpreter tool.",
 						Attributes: map[string]schema.Attribute{
-							"file_ids": schema.ListAttribute{
+							"file_ids": schema.SetAttribute{
 								MarkdownDescription: "File IDs that the code interpreter can use.",
 								ElementType:         types.StringType,
 								Optional:            true,

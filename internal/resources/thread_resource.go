@@ -3,6 +3,7 @@ package resources
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/darnold/terraform-provider-openai/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -410,6 +411,9 @@ func convertTerraformToolResourcesToOpenAI(ctx context.Context, toolResources ty
 	var diags diag.Diagnostics
 
 	val := toolResources.Attributes()
+	if val == nil {
+		return result, diags
+	}
 
 	// Handle code_interpreter
 	if codeInterpreter, ok := val["code_interpreter"].(types.Object); ok && !codeInterpreter.IsNull() {
@@ -420,6 +424,8 @@ func convertTerraformToolResourcesToOpenAI(ctx context.Context, toolResources ty
 			if diags.HasError() {
 				return result, diags
 			}
+			// Sort the file IDs for consistency
+			sort.Strings(ids)
 			result.CodeInterpreter = &openai.CodeInterpreterToolResources{
 				FileIDs: ids,
 			}
@@ -435,6 +441,8 @@ func convertTerraformToolResourcesToOpenAI(ctx context.Context, toolResources ty
 			if diags.HasError() {
 				return result, diags
 			}
+			// Sort the vector store IDs for consistency
+			sort.Strings(ids)
 			result.FileSearch = &openai.FileSearchToolResources{
 				VectorStoreIDs: ids,
 			}
@@ -447,6 +455,14 @@ func convertTerraformToolResourcesToOpenAI(ctx context.Context, toolResources ty
 // Helper function to convert from OpenAI ToolResources to Terraform state
 func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai.ToolResources) (types.Object, diag.Diagnostics) {
 	var diags diag.Diagnostics
+
+	// Sort both file IDs and vector store IDs for consistency
+	if toolResources.CodeInterpreter != nil && len(toolResources.CodeInterpreter.FileIDs) > 0 {
+		sort.Strings(toolResources.CodeInterpreter.FileIDs)
+	}
+	if toolResources.FileSearch != nil && len(toolResources.FileSearch.VectorStoreIDs) > 0 {
+		sort.Strings(toolResources.FileSearch.VectorStoreIDs)
+	}
 
 	// Define the object type structure
 	attrTypes := map[string]attr.Type{
@@ -492,6 +508,29 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 			return types.ObjectNull(attrTypes), diags
 		}
 		attrs["code_interpreter"] = codeInterpreterVal
+	} else {
+		// Set empty code_interpreter with empty file_ids list if not present
+		emptyFileIDs, d := types.ListValueFrom(ctx, types.StringType, []string{})
+		diags.Append(d...)
+		if diags.HasError() {
+			return types.ObjectNull(attrTypes), diags
+		}
+
+		emptyCodeInterpreter, d := types.ObjectValue(
+			map[string]attr.Type{
+				"file_ids": types.ListType{
+					ElemType: types.StringType,
+				},
+			},
+			map[string]attr.Value{
+				"file_ids": emptyFileIDs,
+			},
+		)
+		diags.Append(d...)
+		if diags.HasError() {
+			return types.ObjectNull(attrTypes), diags
+		}
+		attrs["code_interpreter"] = emptyCodeInterpreter
 	}
 
 	// Handle file_search
@@ -517,8 +556,32 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 			return types.ObjectNull(attrTypes), diags
 		}
 		attrs["file_search"] = fileSearchVal
+	} else {
+		// Set empty file_search with empty vector_store_ids list if not present
+		emptyVectorStoreIDs, d := types.ListValueFrom(ctx, types.StringType, []string{})
+		diags.Append(d...)
+		if diags.HasError() {
+			return types.ObjectNull(attrTypes), diags
+		}
+
+		emptyFileSearch, d := types.ObjectValue(
+			map[string]attr.Type{
+				"vector_store_ids": types.ListType{
+					ElemType: types.StringType,
+				},
+			},
+			map[string]attr.Value{
+				"vector_store_ids": emptyVectorStoreIDs,
+			},
+		)
+		diags.Append(d...)
+		if diags.HasError() {
+			return types.ObjectNull(attrTypes), diags
+		}
+		attrs["file_search"] = emptyFileSearch
 	}
 
+	// Create and return the final object
 	return types.ObjectValue(attrTypes, attrs)
 }
 

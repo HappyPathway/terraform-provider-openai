@@ -34,9 +34,6 @@
     {
       "name": "docs/provider/framework",
       "path": "../docs/terraform-plugin-framework"
-    },
-    {
-      "path": "../docs/openai-go"
     }
   ],
   "launch": {

@@ -48,7 +48,7 @@ type AssistantToolModel struct {
 	FunctionDefinition types.String `tfsdk:"function_definition"`
 }
 
-func (d *AssistantDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *AssistantDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_assistant"
 }
 
