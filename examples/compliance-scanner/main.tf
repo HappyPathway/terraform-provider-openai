@@ -8,22 +8,76 @@ terraform {
 
 provider "openai" {}
 
-# Upload files for the assistant to use
+# Upload inline security policies
 resource "openai_file" "security_policies" {
-  filename  = "security-policies.json"
-  file_path = "${path.module}/policies/security-policies.json"
-  purpose   = "assistants"
+  filename = "security-policies.json"
+  content = jsonencode({
+    policies = {
+      encryption = {
+        required    = true
+        algorithms  = ["AES-256", "TLS-1.2"]
+        description = "All data must be encrypted at rest and in transit"
+      }
+      network_access = {
+        public_access = false
+        vpn_required  = true
+        description   = "Resources must not be publicly accessible"
+      }
+      authentication = {
+        mfa_required = true
+        password_policy = {
+          min_length            = 12
+          require_special_chars = true
+        }
+        description = "Strong authentication controls must be enabled"
+      }
+    }
+  })
+  purpose = "assistants"
 }
 
+# Upload inline compliance standards
 resource "openai_file" "compliance_standards" {
-  file_path = "${path.module}/standards/compliance-standards.json"
-  filename  = "compliance-standards.json"
-  purpose   = "assistants"
+  filename = "compliance-standards.json"
+  content = jsonencode({
+    standards = {
+      cis = {
+        version = "1.4.0"
+        controls = [
+          {
+            id          = "1.1"
+            title       = "Maintain current contact details"
+            description = "Ensure contact email and phone are current for security notifications"
+          },
+          {
+            id          = "1.2"
+            title       = "Multi factor authentication"
+            description = "Enable MFA for all human users in the AWS Account"
+          }
+        ]
+      }
+      nist = {
+        framework = "CSF"
+        version   = "1.1"
+        functions = ["Identify", "Protect", "Detect", "Respond", "Recover"]
+      }
+      soc2 = {
+        principles = ["Security", "Availability", "Processing Integrity"]
+        controls = {
+          CC1 = "Control Environment"
+          CC2 = "Communication and Information"
+          CC3 = "Risk Assessment"
+        }
+      }
+    }
+  })
+  purpose = "assistants"
 }
 
+# Upload AWS security guidelines
 resource "openai_file" "aws_guidelines" {
-  file_path = "${path.module}/guidelines/aws-security-best-practices.md"
   filename  = "aws-security-best-practices.md"
+  file_path = "${path.module}/aws-security-best-practices.md"
   purpose   = "assistants"
 }
 
@@ -31,23 +85,7 @@ resource "openai_file" "aws_guidelines" {
 resource "openai_assistant" "security_scanner" {
   name         = "Security and Compliance Scanner"
   model        = "gpt-4-turbo-preview"
-  instructions = <<-EOT
-    You are a specialized security and compliance assistant for infrastructure code.
-    Your responsibilities include:
-    1. Static analysis of infrastructure code for security issues
-    2. Compliance verification against industry standards
-    3. Best practices enforcement for cloud resources
-    4. Security posture assessment and recommendations
-    5. Generation of detailed compliance reports
-
-    When analyzing configurations:
-    - Check for security misconfigurations and vulnerabilities
-    - Validate against organizational policies and compliance standards
-    - Provide specific references to violated policies
-    - Suggest concrete fixes with code examples
-    - Consider both security and compliance implications
-    - Reference relevant AWS security best practices
-  EOT
+  instructions = file("${path.module}/assistant_instructions.md")
 
   tools = ["code_interpreter", "file_search"]
 
@@ -77,39 +115,6 @@ resource "openai_thread" "security_scan" {
     scan_level  = "detailed"
     environment = "production"
   }
-}
-
-# Initialize the scanning process with a message
-resource "openai_message" "scan_request" {
-  thread_id = openai_thread.security_scan.id
-  role      = "user"
-  content   = <<-EOT
-    Please perform a comprehensive security and compliance analysis of the following infrastructure code.
-    Provide a detailed report including:
-    1. Security vulnerabilities and misconfigurations
-    2. Compliance violations against standard frameworks (CIS, NIST, SOC2)
-    3. Risk assessment for each finding
-    4. Specific remediation steps with code examples
-    5. References to relevant security policies and best practices
-
-    Infrastructure Code:
-    ${local.example_config}
-  EOT
-}
-
-# Run the assistant on the thread to analyze the code
-resource "openai_run" "security_analysis" {
-  thread_id = openai_thread.security_scan.id
-  assistant_id = openai_assistant.security_scanner.id
-
-  # Wait for the analysis to complete
-  wait_for_completion = true
-}
-
-# Output the security analysis results
-output "security_analysis" {
-  description = "Detailed security and compliance analysis results"
-  value       = openai_run.security_analysis
 }
 
 # Example infrastructure code
@@ -143,6 +148,50 @@ locals {
       restrict_public_buckets = false
     }
   EOT
+
+  # Configure detailed instructions for the security scanner
+  scanner_instructions = <<-EOT
+    EOT
+}
+
+# Initialize the scanning process with a message
+resource "openai_message" "scan_request" {
+  thread_id = openai_thread.security_scan.id
+  role      = "user"
+  content   = <<-EOT
+Please perform a comprehensive security and compliance analysis of the following infrastructure code:
+
+```hcl
+${local.example_config}
+```
+  EOT
+}
+
+# Run the assistant on the thread to analyze the code
+resource "openai_run" "security_analysis" {
+  thread_id    = openai_thread.security_scan.id
+  assistant_id = openai_assistant.security_scanner.id
+
+  # Use the detailed instructions from locals
+  instructions = local.scanner_instructions
+
+  # Wait for completion with reasonable timeout
+  wait_for_completion = true
+  polling_interval    = "5s"
+  timeout             = "10m"
+}
+
+# Output the security analysis results
+output "security_analysis" {
+  description = "Detailed security and compliance analysis results"
+  value = {
+    status             = openai_run.security_analysis.status
+    started_at         = openai_run.security_analysis.started_at
+    completed_at       = openai_run.security_analysis.completed_at
+    last_error         = openai_run.security_analysis.last_error
+    response_content   = openai_run.security_analysis.response_content
+    incomplete_details = openai_run.security_analysis.incomplete_details
+  }
 }
 
 # Example usage outputs

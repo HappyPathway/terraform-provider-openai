@@ -185,14 +185,15 @@ func (r *MessageResource) Create(ctx context.Context, req resource.CreateRequest
 		}
 	}
 
-	// Handle optional fields
-	if message.AssistantID != nil {
+	// Handle assistant_id
+	if message.AssistantID != nil && *message.AssistantID != "" {
 		plan.AssistantID = types.StringValue(*message.AssistantID)
 	} else {
 		plan.AssistantID = types.StringNull()
 	}
 
-	if message.RunID != nil {
+	// Handle run_id
+	if message.RunID != nil && *message.RunID != "" {
 		plan.RunID = types.StringValue(*message.RunID)
 	} else {
 		plan.RunID = types.StringNull()

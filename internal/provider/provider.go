@@ -143,13 +143,14 @@ func (p *OpenAIProvider) DataSources(_ context.Context) []func() datasource.Data
 // Resources defines the resources implemented in the provider.
 func (p *OpenAIProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
+		resources.NewAssistantResource,
 		resources.NewChatCompletionResource,
 		resources.NewEmbeddingResource,
 		resources.NewFileResource,
 		resources.NewFineTuneResource,
-		resources.NewAssistantResource,
-		resources.NewThreadResource,
 		resources.NewMessageResource,
+		resources.NewRunResource,
+		resources.NewThreadResource,
 		resources.NewVectorStoreResource,
 		resources.NewVectorStoreFileResource,
 	}

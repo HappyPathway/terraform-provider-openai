@@ -61,12 +61,36 @@ resource "openai_message" "assistant_response" {
   }
 }
 
+# Create a run to process the messages with the assistant
+resource "openai_run" "support_analysis" {
+  thread_id    = openai_thread.support_thread.id
+  assistant_id = openai_assistant.support_assistant.id
+
+  # Optional overrides as shown in deep dive docs
+  model        = "gpt-4-turbo-preview" # Using the correct model name
+  instructions = "Please analyze the pricing discrepancy in detail and provide a clear explanation."
+
+  # Control token usage and context window
+  max_prompt_tokens     = 4000
+  max_completion_tokens = 1000
+
+  # Wait for completion with reasonable timeout
+  wait_for_completion = true
+  polling_interval    = "5s"
+  timeout             = "10m"
+}
+
 output "thread_id" {
   value       = openai_thread.support_thread.id
   description = "ID of the created thread"
 }
 
+output "run_status" {
+  value       = openai_run.support_analysis.status
+  description = "Status of the assistant run"
+}
+
 output "assistant_response" {
-  value       = openai_message.assistant_response.response_content
-  description = "The assistant's response to the user's inquiry"
+  value       = openai_run.support_analysis.response_content
+  description = "The assistant's response to the pricing inquiry"
 }

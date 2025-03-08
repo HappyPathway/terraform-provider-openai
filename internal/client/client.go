@@ -32,9 +32,6 @@ type Config struct {
 // Client wraps an OpenAI API client for use with the Terraform provider
 type Client struct {
 	OpenAI      *openai.Client
-	httpClient  *http.Client
-	apiKey      string
-	baseURL     string
 	debug       bool
 	rateLimiter *rate.Limiter
 	config      Config
@@ -195,4 +192,77 @@ func (c *Client) calculateBackoff(attempt int) time.Duration {
 	}
 
 	return time.Duration(backoffWithJitterMs) * time.Millisecond
+}
+
+// CreateRunRequest is our internal run creation request type
+type CreateRunRequest struct {
+	ThreadID            string
+	AssistantID         string
+	Model               string
+	Instructions        string
+	Tools               []openai.AssistantTool
+	Metadata            map[string]interface{}
+	MaxPromptTokens     int
+	MaxCompletionTokens int
+}
+
+// CreateRun creates a new run for a thread
+func (c *Client) CreateRun(ctx context.Context, req *CreateRunRequest) (*openai.Run, error) {
+	runRequest := openai.RunRequest{
+		AssistantID:  req.AssistantID,
+		Model:        req.Model,
+		Instructions: req.Instructions,
+	}
+
+	if req.Metadata != nil {
+		runRequest.Metadata = req.Metadata
+	}
+
+	// Set token control parameters if provided
+	if req.MaxPromptTokens > 0 {
+		runRequest.MaxPromptTokens = req.MaxPromptTokens
+	}
+	if req.MaxCompletionTokens > 0 {
+		runRequest.MaxCompletionTokens = req.MaxCompletionTokens
+	}
+
+	// Convert AssistantTool to Tool
+	var tools []openai.Tool
+	for _, tool := range req.Tools {
+		var toolType openai.ToolType
+		switch tool.Type {
+		case openai.AssistantToolTypeCodeInterpreter, openai.AssistantToolTypeRetrieval, openai.AssistantToolTypeFunction:
+			toolType = openai.ToolTypeFunction
+		default:
+			return nil, fmt.Errorf("unsupported tool type: %s", tool.Type)
+		}
+		tools = append(tools, openai.Tool{
+			Type: toolType,
+		})
+	}
+	runRequest.Tools = tools
+
+	run, err := c.OpenAI.CreateRun(ctx, req.ThreadID, runRequest)
+	if err != nil {
+		return nil, fmt.Errorf("error creating run: %v", err)
+	}
+	return &run, nil
+}
+
+// GetRun retrieves a run by ID
+func (c *Client) GetRun(ctx context.Context, id string) (*openai.Run, error) {
+	run, err := c.OpenAI.RetrieveRun(ctx, "", id)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving run: %v", err)
+	}
+	return &run, nil
+}
+
+// CancelRun cancels a run
+func (c *Client) CancelRun(ctx context.Context, id string) error {
+	_, err := c.OpenAI.CancelRun(ctx, "", id)
+	if err != nil {
+		return fmt.Errorf("error cancelling run: %v", err)
+	}
+	return nil
 }
