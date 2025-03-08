@@ -1,4 +1,4 @@
-.PHONY: build install test testacc clean examples
+.PHONY: build install test testacc clean examples release
 
 default: build
 
@@ -57,3 +57,7 @@ lint:
 
 fmt:
 	go fmt ./...
+
+release: build testacc examples
+	@echo "Triggering GitHub Actions workflow for release..."
+	@gh workflow run release.yml
