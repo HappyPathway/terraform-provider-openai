@@ -668,3 +668,66 @@
 2025-03-07T15:15:47.201-0800 [DEBUG] provider.stdio: received EOF, stopping recv loop: err="rpc error: code = Unavailable desc = error reading from server: EOF"
 2025-03-07T15:15:47.203-0800 [INFO]  provider: plugin process exited: plugin=.terraform/providers/registry.terraform.io/happypathway/openai/5.0.0/darwin_amd64/terraform-provider-openai id=43855
 2025-03-07T15:15:47.205-0800 [DEBUG] provider: plugin exited
+2025-03-07T15:26:00.857-0800 [INFO]  Terraform version: 1.10.5
+2025-03-07T15:26:00.857-0800 [DEBUG] using github.com/hashicorp/go-tfe v1.70.0
+2025-03-07T15:26:00.857-0800 [DEBUG] using github.com/hashicorp/hcl/v2 v2.23.0
+2025-03-07T15:26:00.857-0800 [DEBUG] using github.com/hashicorp/terraform-svchost v0.1.1
+2025-03-07T15:26:00.857-0800 [DEBUG] using github.com/zclconf/go-cty v1.16.2
+2025-03-07T15:26:00.857-0800 [INFO]  Go runtime version: go1.23.3
+2025-03-07T15:26:00.857-0800 [INFO]  CLI args: []string{"/usr/local/Cellar/tfenv/1.0.2/versions/1.10.5/terraform", "version", "-json"}
+2025-03-07T15:26:00.857-0800 [TRACE] Stdout is not a terminal
+2025-03-07T15:26:00.857-0800 [TRACE] Stderr is not a terminal
+2025-03-07T15:26:00.857-0800 [TRACE] Stdin is not a terminal
+2025-03-07T15:26:00.857-0800 [DEBUG] Attempting to open CLI config file: /Users/darnold/.terraformrc
+2025-03-07T15:26:00.857-0800 [INFO]  Loading CLI configuration from /Users/darnold/.terraformrc
+2025-03-07T15:26:00.857-0800 [INFO]  Loading CLI configuration from /Users/darnold/.terraform.d/credentials.tfrc.json
+2025-03-07T15:26:00.857-0800 [DEBUG] checking for credentials in "/Users/darnold/.terraform.d/plugins"
+2025-03-07T15:26:00.857-0800 [DEBUG] checking for credentials in "/Users/darnold/.terraform.d/plugins/darwin_amd64"
+2025-03-07T15:26:00.857-0800 [DEBUG] Using modified User-Agent: HashiCorp Terraform/1.10.5 (+https://www.terraform.io) HashiCorp-terraform-exec/0.21.0
+2025-03-07T15:26:00.857-0800 [DEBUG] ignoring non-existing provider search directory terraform.d/plugins
+2025-03-07T15:26:00.857-0800 [DEBUG] will search for provider plugins in /Users/darnold/.terraform.d/plugins
+2025-03-07T15:26:00.857-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0" contains invalid type "0.1.0"; ignoring
+2025-03-07T15:26:00.857-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0/darwin_amd64" contains invalid type "0.1.0"; ignoring
+2025-03-07T15:26:00.857-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0/darwin_amd64/terraform-provider-openai" contains invalid type "0.1.0"; ignoring
+2025-03-07T15:26:00.857-0800 [WARN]  Provider plugin search ignored symlink /Users/darnold/.terraform.d/plugins/darwin_amd64/terraform-provider-configstash: only the base directory /Users/darnold/.terraform.d/plugins may be a symlink
+2025-03-07T15:26:00.858-0800 [TRACE] getproviders.SearchLocalDirectory: found hashicorp.com/edu/hashicups v0.3.1 for darwin_amd64 at /Users/darnold/.terraform.d/plugins/hashicorp.com/edu/hashicups/0.3.1/darwin_amd64
+2025-03-07T15:26:00.858-0800 [WARN]  ignoring local provider path "/Users/darnold/.terraform.d/plugins/registry.terraform.io/darnold/openai/3b6fef8/darwin_amd64" with invalid version "3b6fef8": invalid characters "b6fef8"
+2025-03-07T15:26:00.858-0800 [WARN]  ignoring local provider path "/Users/darnold/.terraform.d/plugins/registry.terraform.io/darnold/openai/70f25a4/darwin_amd64" with invalid version "70f25a4": invalid characters "f25a4"
+2025-03-07T15:26:00.859-0800 [TRACE] getproviders.SearchLocalDirectory: found registry.terraform.io/happypathway/openai v5.0.0 for darwin_amd64 at /Users/darnold/.terraform.d/plugins/registry.terraform.io/happypathway/openai/5.0.0/darwin_amd64
+2025-03-07T15:26:00.859-0800 [DEBUG] ignoring non-existing provider search directory /Users/darnold/Library/Application Support/io.terraform/plugins
+2025-03-07T15:26:00.859-0800 [DEBUG] ignoring non-existing provider search directory /Library/Application Support/io.terraform/plugins
+2025-03-07T15:26:00.862-0800 [INFO]  Checkpoint disabled. Not running.
+2025-03-07T15:26:00.864-0800 [INFO]  CLI command args: []string{"version", "-json"}
+2025-03-07T15:26:00.997-0800 [INFO]  Terraform version: 1.10.5
+2025-03-07T15:26:00.998-0800 [DEBUG] using github.com/hashicorp/go-tfe v1.70.0
+2025-03-07T15:26:00.998-0800 [DEBUG] using github.com/hashicorp/hcl/v2 v2.23.0
+2025-03-07T15:26:00.998-0800 [DEBUG] using github.com/hashicorp/terraform-svchost v0.1.1
+2025-03-07T15:26:00.998-0800 [DEBUG] using github.com/zclconf/go-cty v1.16.2
+2025-03-07T15:26:00.998-0800 [INFO]  Go runtime version: go1.23.3
+2025-03-07T15:26:00.998-0800 [INFO]  CLI args: []string{"/usr/local/Cellar/tfenv/1.0.2/versions/1.10.5/terraform", "fmt", "-no-color", "-"}
+2025-03-07T15:26:00.998-0800 [TRACE] Stdout is not a terminal
+2025-03-07T15:26:00.998-0800 [TRACE] Stderr is not a terminal
+2025-03-07T15:26:00.998-0800 [TRACE] Stdin is not a terminal
+2025-03-07T15:26:00.998-0800 [DEBUG] Attempting to open CLI config file: /Users/darnold/.terraformrc
+2025-03-07T15:26:00.998-0800 [INFO]  Loading CLI configuration from /Users/darnold/.terraformrc
+2025-03-07T15:26:00.998-0800 [INFO]  Loading CLI configuration from /Users/darnold/.terraform.d/credentials.tfrc.json
+2025-03-07T15:26:00.998-0800 [DEBUG] checking for credentials in "/Users/darnold/.terraform.d/plugins"
+2025-03-07T15:26:00.998-0800 [DEBUG] checking for credentials in "/Users/darnold/.terraform.d/plugins/darwin_amd64"
+2025-03-07T15:26:00.998-0800 [DEBUG] Using modified User-Agent: HashiCorp Terraform/1.10.5 (+https://www.terraform.io) HashiCorp-terraform-exec/0.21.0
+2025-03-07T15:26:00.998-0800 [DEBUG] ignoring non-existing provider search directory terraform.d/plugins
+2025-03-07T15:26:00.998-0800 [DEBUG] will search for provider plugins in /Users/darnold/.terraform.d/plugins
+2025-03-07T15:26:00.998-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0" contains invalid type "0.1.0"; ignoring
+2025-03-07T15:26:00.998-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0/darwin_amd64" contains invalid type "0.1.0"; ignoring
+2025-03-07T15:26:00.998-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0/darwin_amd64/terraform-provider-openai" contains invalid type "0.1.0"; ignoring
+2025-03-07T15:26:00.998-0800 [WARN]  Provider plugin search ignored symlink /Users/darnold/.terraform.d/plugins/darwin_amd64/terraform-provider-configstash: only the base directory /Users/darnold/.terraform.d/plugins may be a symlink
+2025-03-07T15:26:00.999-0800 [TRACE] getproviders.SearchLocalDirectory: found hashicorp.com/edu/hashicups v0.3.1 for darwin_amd64 at /Users/darnold/.terraform.d/plugins/hashicorp.com/edu/hashicups/0.3.1/darwin_amd64
+2025-03-07T15:26:00.999-0800 [WARN]  ignoring local provider path "/Users/darnold/.terraform.d/plugins/registry.terraform.io/darnold/openai/3b6fef8/darwin_amd64" with invalid version "3b6fef8": invalid characters "b6fef8"
+2025-03-07T15:26:00.999-0800 [WARN]  ignoring local provider path "/Users/darnold/.terraform.d/plugins/registry.terraform.io/darnold/openai/70f25a4/darwin_amd64" with invalid version "70f25a4": invalid characters "f25a4"
+2025-03-07T15:26:00.999-0800 [TRACE] getproviders.SearchLocalDirectory: found registry.terraform.io/happypathway/openai v5.0.0 for darwin_amd64 at /Users/darnold/.terraform.d/plugins/registry.terraform.io/happypathway/openai/5.0.0/darwin_amd64
+2025-03-07T15:26:00.999-0800 [DEBUG] ignoring non-existing provider search directory /Users/darnold/Library/Application Support/io.terraform/plugins
+2025-03-07T15:26:00.999-0800 [DEBUG] ignoring non-existing provider search directory /Library/Application Support/io.terraform/plugins
+2025-03-07T15:26:01.003-0800 [INFO]  Checkpoint disabled. Not running.
+2025-03-07T15:26:01.004-0800 [INFO]  CLI command args: []string{"fmt", "-no-color", "-"}
+2025-03-07T15:26:01.005-0800 [TRACE] terraform fmt: Formatting <stdin>
+2025-03-07T15:26:01.005-0800 [DEBUG] Using modified User-Agent: Terraform/1.10.5 HashiCorp-terraform-exec/0.21.0
+2025-03-07T15:26:01.005-0800 [DEBUG] Using modified User-Agent: HashiCorp Terraform/1.10.5 (+https://www.terraform.io) HashiCorp-terraform-exec/0.21.0

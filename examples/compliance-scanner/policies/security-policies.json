@@ -1,0 +1,55 @@
+{
+  "security_policies": [
+    {
+      "name": "password_policy",
+      "description": "Password requirements and rotation policy",
+      "rules": [
+        {
+          "min_length": 12
+        },
+        {
+          "require_special_chars": true
+        },
+        {
+          "require_numbers": true
+        },
+        {
+          "max_age_days": 90
+        }
+      ]
+    },
+    {
+      "name": "access_control",
+      "description": "Access control and authentication policies",
+      "rules": [
+        {
+          "require_mfa": true
+        },
+        {
+          "session_timeout": 30
+        },
+        {
+          "max_login_attempts": 5
+        }
+      ]
+    },
+    {
+      "name": "data_protection",
+      "description": "Data encryption and protection policies",
+      "rules": [
+        {
+          "encrypt_data_at_rest": true
+        },
+        {
+          "encrypt_data_in_transit": true
+        },
+        {
+          "backup_frequency": "daily"
+        },
+        {
+          "retention_period_days": 90
+        }
+      ]
+    }
+  ]
+}

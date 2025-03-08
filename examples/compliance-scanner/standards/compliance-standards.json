@@ -1,0 +1,54 @@
+{
+  "compliance_frameworks": {
+    "CIS": {
+      "version": "1.4.0",
+      "controls": {
+        "1.1": {
+          "title": "Maintain current contact details",
+          "level": 1,
+          "type": "administrative"
+        },
+        "1.2": {
+          "title": "Ensure security contact information is registered",
+          "level": 1,
+          "type": "administrative"
+        },
+        "2.1": {
+          "title": "Ensure MFA is enabled for all IAM users",
+          "level": 1,
+          "type": "technical"
+        }
+      }
+    },
+    "NIST": {
+      "version": "800-53",
+      "controls": {
+        "AC-2": {
+          "title": "Account Management",
+          "family": "Access Control",
+          "priority": "P1"
+        },
+        "AU-2": {
+          "title": "Audit Events",
+          "family": "Audit and Accountability",
+          "priority": "P1"
+        }
+      }
+    },
+    "SOC2": {
+      "version": "2017",
+      "controls": {
+        "CC6.1": {
+          "title": "Manage logical access security",
+          "category": "Common Criteria",
+          "type": "Security"
+        },
+        "CC6.7": {
+          "title": "Restrict data access",
+          "category": "Common Criteria",
+          "type": "Security"
+        }
+      }
+    }
+  }
+}

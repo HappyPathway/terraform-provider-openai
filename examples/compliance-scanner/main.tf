@@ -8,22 +8,22 @@ terraform {
 
 provider "openai" {}
 
-# Upload security scanning rules and compliance policies
+# Upload files for the assistant to use
 resource "openai_file" "security_policies" {
-  filename  = "security-policies.yaml"
-  file_path = "${path.module}/policies/security-policies.yaml"
+  filename  = "security-policies.json"
+  file_path = "${path.module}/policies/security-policies.json"
   purpose   = "assistants"
 }
 
 resource "openai_file" "compliance_standards" {
-  filename  = "compliance-standards.json"
   file_path = "${path.module}/standards/compliance-standards.json"
+  filename  = "compliance-standards.json"
   purpose   = "assistants"
 }
 
-resource "openai_file" "aws_best_practices" {
-  filename  = "aws-security-best-practices.md"
+resource "openai_file" "aws_guidelines" {
   file_path = "${path.module}/guidelines/aws-security-best-practices.md"
+  filename  = "aws-security-best-practices.md"
   purpose   = "assistants"
 }
 
@@ -53,18 +53,10 @@ resource "openai_assistant" "security_scanner" {
 
   tool_resources {
     code_interpreter {
-      # Files that the assistant can analyze with code interpreter
       file_ids = [
         openai_file.security_policies.id,
-        openai_file.compliance_standards.id
-      ]
-    }
-    file_search {
-      # Files available for semantic search during analysis
-      vector_store_ids = [
-        openai_file.security_policies.id,
         openai_file.compliance_standards.id,
-        openai_file.aws_best_practices.id
+        openai_file.aws_guidelines.id
       ]
     }
   }
@@ -85,30 +77,13 @@ resource "openai_thread" "security_scan" {
     scan_level  = "detailed"
     environment = "production"
   }
-
-  # Initialize thread with tool resources
-  tool_resources {
-    code_interpreter {
-      file_ids = [
-        openai_file.security_policies.id,
-        openai_file.compliance_standards.id
-      ]
-    }
-    file_search {
-      vector_store_ids = [
-        openai_file.security_policies.id,
-        openai_file.compliance_standards.id,
-        openai_file.aws_best_practices.id
-      ]
-    }
-  }
 }
 
 # Initialize the scanning process with a message
 resource "openai_message" "scan_request" {
-  thread_id    = openai_thread.security_scan.id
-  role         = "user"
-  content      = <<-EOT
+  thread_id = openai_thread.security_scan.id
+  role      = "user"
+  content   = <<-EOT
     Please perform a comprehensive security and compliance analysis of the following infrastructure code.
     Provide a detailed report including:
     1. Security vulnerabilities and misconfigurations
@@ -120,13 +95,21 @@ resource "openai_message" "scan_request" {
     Infrastructure Code:
     ${local.example_config}
   EOT
+}
+
+# Run the assistant on the thread to analyze the code
+resource "openai_run" "security_analysis" {
+  thread_id = openai_thread.security_scan.id
   assistant_id = openai_assistant.security_scanner.id
+
+  # Wait for the analysis to complete
+  wait_for_completion = true
 }
 
 # Output the security analysis results
 output "security_analysis" {
   description = "Detailed security and compliance analysis results"
-  value       = openai_message.scan_request
+  value       = openai_run.security_analysis
 }
 
 # Example infrastructure code
