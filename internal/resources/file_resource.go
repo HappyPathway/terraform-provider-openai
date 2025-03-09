@@ -3,7 +3,7 @@ package resources
 import (
 	"context"
 	"fmt"
-	"path/filepath"
+	"os"
 
 	"github.com/darnold/terraform-provider-openai/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -34,6 +34,7 @@ type FileResourceModel struct {
 	ID            types.String `tfsdk:"id"`
 	Filename      types.String `tfsdk:"filename"`
 	FilePath      types.String `tfsdk:"file_path"`
+	Content       types.String `tfsdk:"content"`
 	Purpose       types.String `tfsdk:"purpose"`
 	ObjectID      types.String `tfsdk:"object_id"`
 	Bytes         types.Int64  `tfsdk:"bytes"`
@@ -63,8 +64,13 @@ func (r *FileResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 				Required:            true,
 			},
 			"file_path": schema.StringAttribute{
-				MarkdownDescription: "The local path to the file to upload.",
-				Required:            true,
+				MarkdownDescription: "The local path to the file to upload. Either file_path or content must be specified.",
+				Optional:            true,
+			},
+			"content": schema.StringAttribute{
+				MarkdownDescription: "The string content to upload as a file. Either file_path or content must be specified.",
+				Optional:            true,
+				Sensitive:           true,
 			},
 			"purpose": schema.StringAttribute{
 				MarkdownDescription: "The purpose of the file. Allowed values are 'fine-tune', 'fine-tune-results', or 'assistants'.",
@@ -120,10 +126,49 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	// Create file request
-	fileReq := openai.FileRequest{
-		FilePath: plan.FilePath.ValueString(),
-		Purpose:  plan.Purpose.ValueString(),
+	// Validate that either file_path or content is provided
+	if plan.FilePath.IsNull() && plan.Content.IsNull() {
+		resp.Diagnostics.AddError(
+			"Missing File Source",
+			"Either file_path or content must be specified",
+		)
+		return
+	}
+
+	if !plan.FilePath.IsNull() && !plan.Content.IsNull() {
+		resp.Diagnostics.AddError(
+			"Invalid Configuration",
+			"Only one of file_path or content can be specified",
+		)
+		return
+	}
+
+	var fileReq openai.FileRequest
+	var tempFile string
+	var err error
+
+	// Handle file creation based on source
+	if !plan.FilePath.IsNull() {
+		fileReq = openai.FileRequest{
+			FilePath: plan.FilePath.ValueString(),
+			Purpose:  plan.Purpose.ValueString(),
+		}
+	} else {
+		// Create a temporary file with the content
+		tempFile, err = r.createTempFile(plan.Filename.ValueString(), plan.Content.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Creating Temporary File",
+				fmt.Sprintf("Unable to create temporary file: %s", err),
+			)
+			return
+		}
+		defer os.Remove(tempFile) // Clean up temporary file
+		fileReq = openai.FileRequest{
+			FilePath: tempFile,
+			FileName: plan.Filename.ValueString(), // Set the original filename
+			Purpose:  plan.Purpose.ValueString(),
+		}
 	}
 
 	tflog.Debug(ctx, "Creating file", map[string]interface{}{
@@ -147,7 +192,8 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 	plan.ObjectID = types.StringValue(file.ID)
 	plan.CreatedAt = types.Int64Value(int64(file.CreatedAt))
 	plan.Bytes = types.Int64Value(int64(file.Bytes))
-	plan.Filename = types.StringValue(filepath.Base(file.FileName)) // Use just the base filename
+	// Keep the original filename instead of using API response
+	plan.Filename = types.StringValue(plan.Filename.ValueString())
 	plan.Purpose = types.StringValue(file.Purpose)
 	plan.Status = types.StringValue(file.Status)
 	if file.StatusDetails != "" {
@@ -162,6 +208,24 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+}
+
+// Helper function to create a temporary file with content
+func (r *FileResource) createTempFile(filename string, content string) (string, error) {
+	// Create temporary file
+	tmpfile, err := os.CreateTemp("", "openai-*-"+filename)
+	if err != nil {
+		return "", fmt.Errorf("error creating temporary file: %w", err)
+	}
+	defer tmpfile.Close()
+
+	// Write content to the file
+	if _, err := tmpfile.WriteString(content); err != nil {
+		os.Remove(tmpfile.Name()) // Clean up on error
+		return "", fmt.Errorf("error writing to temporary file: %w", err)
+	}
+
+	return tmpfile.Name(), nil
 }
 
 func (r *FileResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -227,6 +291,23 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
+	// Validate that either file_path or content is provided
+	if plan.FilePath.IsNull() && plan.Content.IsNull() {
+		resp.Diagnostics.AddError(
+			"Missing File Source",
+			"Either file_path or content must be specified",
+		)
+		return
+	}
+
+	if !plan.FilePath.IsNull() && !plan.Content.IsNull() {
+		resp.Diagnostics.AddError(
+			"Invalid Configuration",
+			"Only one of file_path or content can be specified",
+		)
+		return
+	}
+
 	// Delete the existing file
 	fileID := state.ObjectID.ValueString()
 	if fileID != "" {
@@ -243,17 +324,41 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		}
 	}
 
-	// Create file request - no need to set headers manually
-	file, err := r.client.OpenAI.CreateFile(ctx, openai.FileRequest{
-		FilePath: plan.FilePath.ValueString(),
-		Purpose:  plan.Purpose.ValueString(),
-	})
+	var fileReq openai.FileRequest
+	var tempFile string
+	var err error
+
+	// Handle file creation based on source
+	if !plan.FilePath.IsNull() {
+		fileReq = openai.FileRequest{
+			FilePath: plan.FilePath.ValueString(),
+			Purpose:  plan.Purpose.ValueString(),
+		}
+	} else {
+		// Create a temporary file with the content
+		tempFile, err = r.createTempFile(plan.Filename.ValueString(), plan.Content.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Creating Temporary File",
+				fmt.Sprintf("Unable to create temporary file: %s", err),
+			)
+			return
+		}
+		defer os.Remove(tempFile) // Clean up temporary file
+		fileReq = openai.FileRequest{
+			FilePath: tempFile,
+			FileName: plan.Filename.ValueString(), // Set the original filename
+			Purpose:  plan.Purpose.ValueString(),
+		}
+	}
 
 	tflog.Debug(ctx, "Updating file (recreate)", map[string]interface{}{
 		"filename": plan.Filename.ValueString(),
 		"purpose":  plan.Purpose.ValueString(),
 	})
 
+	// Upload the file
+	file, err := r.client.OpenAI.CreateFile(ctx, fileReq)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating File",
@@ -267,7 +372,7 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	plan.ObjectID = types.StringValue(file.ID)
 	plan.Bytes = types.Int64Value(int64(file.Bytes))
 	plan.CreatedAt = types.Int64Value(int64(file.CreatedAt))
-	plan.Filename = types.StringValue(filepath.Base(file.FileName)) // Use just the base filename
+	// Keep the original filename instead of using API response
 	plan.Purpose = types.StringValue(file.Purpose)
 	plan.Status = types.StringValue(file.Status)
 	if file.StatusDetails != "" {

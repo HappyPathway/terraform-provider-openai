@@ -171,14 +171,15 @@ class ProjectInitializer:
         self.repositories = config.get("repositories", [])
         
         # Make sure we have all required settings
-        if not all([self.project_name, self.repo_org, self.repositories]):
+        if not all([self.project_name, self.repo_org]):
             print("❌ Missing required configuration in .gproj file")
             sys.exit(1)
 
-        # Add the base repository to the list if not present
-        base_repo_name = Path.cwd().name
-        if not any(repo["name"] == base_repo_name for repo in self.repositories):
-            self.repositories.append({"name": base_repo_name})
+        # Add the base repository to the list if repositories list exists
+        if isinstance(self.repositories, list):
+            base_repo_name = Path.cwd().name
+            if not any(repo["name"] == base_repo_name for repo in self.repositories):
+                self.repositories.append({"name": base_repo_name})
             
         # Set up paths and rate limiting
         self.base_dir = Path("..").resolve()

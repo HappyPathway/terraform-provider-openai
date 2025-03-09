@@ -225,29 +225,21 @@ func convertOpenAIToolsToTerraform(ctx context.Context, tools []openai.Assistant
 	tfTools := make([]attr.Value, 0, len(tools))
 	for _, tool := range tools {
 		toolMap := make(map[string]attr.Value)
-		switch tool.Type {
-		case openai.AssistantToolTypeCodeInterpreter:
-			toolMap["type"] = types.StringValue("code_interpreter")
-			toolMap["function_definition"] = types.StringNull()
-		case openai.AssistantToolTypeRetrieval:
-			toolMap["type"] = types.StringValue("retrieval")
-			toolMap["function_definition"] = types.StringNull()
-		case openai.AssistantToolTypeFunction:
-			toolMap["type"] = types.StringValue("function")
-			if tool.Function != nil {
-				functionJSON, err := json.Marshal(tool.Function)
-				if err != nil {
-					diags.AddError(
-						"Error Converting Function Definition",
-						fmt.Sprintf("Unable to convert function definition to JSON: %s", err),
-					)
-					continue
-				}
-				toolMap["function_definition"] = types.StringValue(string(functionJSON))
-			} else {
-				toolMap["function_definition"] = types.StringNull()
+		toolMap["type"] = types.StringValue(string(tool.Type))
+		if tool.Function != nil {
+			functionJSON, err := json.Marshal(tool.Function)
+			if err != nil {
+				diags.AddError(
+					"Error Converting Function Definition",
+					fmt.Sprintf("Unable to convert function definition to JSON: %s", err),
+				)
+				continue
 			}
+			toolMap["function_definition"] = types.StringValue(string(functionJSON))
+		} else {
+			toolMap["function_definition"] = types.StringNull()
 		}
+
 		toolObj, err := types.ObjectValue(
 			map[string]attr.Type{
 				"type":                types.StringType,

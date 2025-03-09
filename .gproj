@@ -26,6 +26,12 @@
       "tag": "main"
     },
     {
+      "name": "docs/provider/github/resources",
+      "path": "website/docs/r",
+      "repo": "https://github.com/integration/terraform-provider-github",
+      "tag": "main"
+    },
+    {
       "name": "docs/provider/openai",
       "path": "../docs/go-openai/",
       "repo": "https://github.com/sashabaranov/go-openai.git",

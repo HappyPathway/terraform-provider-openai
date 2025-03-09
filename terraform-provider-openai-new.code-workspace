@@ -28,6 +28,10 @@
       "path": "../docs/terraform-provider-google/website/docs/r"
     },
     {
+      "name": "docs/provider/github",
+      "path": "../providers/terraform-provider-github"
+    },
+    {
       "name": "docs/provider/openai",
       "path": "../docs/go-openai"
     },
