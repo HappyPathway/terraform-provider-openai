@@ -38,6 +38,10 @@
     {
       "name": "docs/provider/framework",
       "path": "../docs/terraform-plugin-framework"
+    },
+    {
+      "name": "docs/hashicorp/plugin-testing",
+      "path": "../docs/docs/hashicorp/plugin-testing/content/terraform-plugin-testing/v1.9.x/docs/plugin/testing/"
     }
   ],
   "launch": {

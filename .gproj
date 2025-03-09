@@ -2,43 +2,49 @@
   "docs_base_path": "../docs",
   "documentation_sources": [
     {
-      "name": "docs/provider/aws/data-sources",
+      "name": "hashicorp/plugin-testing",
+      "path": "content/terraform-plugin-testing/v1.11.x/docs/plugin/testing",
+      "repo": "https://github.com/hashicorp/web-unified-docs.git",
+      "tag": "main"
+    },
+    {
+      "name": "provider/aws/data-sources",
       "path": "website/docs/d",
       "repo": "https://github.com/hashicorp/terraform-provider-aws",
       "tag": "main"
     },
     {
-      "name": "docs/provider/aws/resources",
+      "name": "provider/aws/resources",
       "path": "website/docs/r",
       "repo": "https://github.com/hashicorp/terraform-provider-aws",
       "tag": "main"
     },
     {
-      "name": "docs/provider/google/data-sources",
+      "name": "provider/google/data-sources",
       "path": "website/docs/d",
       "repo": "https://github.com/hashicorp/terraform-provider-google",
       "tag": "main"
     },
     {
-      "name": "docs/provider/google/resources",
+      "name": "provider/google/resources",
       "path": "website/docs/r",
       "repo": "https://github.com/hashicorp/terraform-provider-google",
       "tag": "main"
     },
     {
-      "name": "docs/provider/github/resources",
+      "name": "provider/github/resources",
       "path": "website/docs/r",
       "repo": "https://github.com/integration/terraform-provider-github",
       "tag": "main"
     },
     {
-      "name": "docs/provider/openai",
+      "name": "provider/openai",
       "path": "../docs/go-openai/",
       "repo": "https://github.com/sashabaranov/go-openai.git",
       "tag": "main"
     },
     {
-      "name": "docs/provider/framework",
+      "name": "provider/framework",
       "path": "../docs/terraform-plugin-framework/website/docs/plugin/framework",
       "repo": "https://github.com/hashicorp/terraform-plugin-framework.git",
       "tag": "main"
