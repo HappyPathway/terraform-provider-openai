@@ -64,6 +64,9 @@ func (r *MessageResource) Schema(ctx context.Context, req resource.SchemaRequest
 			"object": schema.StringAttribute{
 				MarkdownDescription: "The object type, always 'thread.message'.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"thread_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the thread this message belongs to.",
@@ -91,11 +94,17 @@ func (r *MessageResource) Schema(ctx context.Context, req resource.SchemaRequest
 				MarkdownDescription: "If set, the ID of the assistant that authored this message.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"run_id": schema.StringAttribute{
 				MarkdownDescription: "If set, the ID of the run associated with this message.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"created_at": schema.Int64Attribute{
 				MarkdownDescription: "The Unix timestamp (in seconds) when the message was created.",
@@ -242,7 +251,7 @@ func (r *MessageResource) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 
 	// Update state with latest values
-	state.Object = types.StringValue(message.Object) // Add this line
+	state.Object = types.StringValue(message.Object)
 	state.Role = types.StringValue(message.Role)
 	state.CreatedAt = types.Int64Value(int64(message.CreatedAt))
 
@@ -258,17 +267,17 @@ func (r *MessageResource) Read(ctx context.Context, req resource.ReadRequest, re
 		state.FileIDs = nil
 	}
 
-	// Handle optional fields
-	if message.AssistantID != nil {
+	// Handle optional fields with proper initialization
+	if message.AssistantID != nil && *message.AssistantID != "" {
 		state.AssistantID = types.StringValue(*message.AssistantID)
 	} else {
-		state.AssistantID = types.StringNull()
+		state.AssistantID = types.StringValue("")
 	}
 
-	if message.RunID != nil {
+	if message.RunID != nil && *message.RunID != "" {
 		state.RunID = types.StringValue(*message.RunID)
 	} else {
-		state.RunID = types.StringNull()
+		state.RunID = types.StringValue("")
 	}
 
 	// Convert metadata
@@ -336,17 +345,19 @@ func (r *MessageResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 
 		// Update state from response
-		plan.Object = types.StringValue(message.Object) // Add this line
-		if message.AssistantID != nil {
+		plan.Object = types.StringValue(message.Object)
+
+		// Handle assistant_id and run_id with proper initialization
+		if message.AssistantID != nil && *message.AssistantID != "" {
 			plan.AssistantID = types.StringValue(*message.AssistantID)
 		} else {
-			plan.AssistantID = types.StringNull()
+			plan.AssistantID = types.StringValue("")
 		}
 
-		if message.RunID != nil {
+		if message.RunID != nil && *message.RunID != "" {
 			plan.RunID = types.StringValue(*message.RunID)
 		} else {
-			plan.RunID = types.StringNull()
+			plan.RunID = types.StringValue("")
 		}
 	} else {
 		// If non-metadata fields changed, return an error as they cannot be modified

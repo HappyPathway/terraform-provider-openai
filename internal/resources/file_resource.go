@@ -148,7 +148,7 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 	var err error
 
 	// Handle file creation based on source
-	if (!plan.FilePath.IsNull()) {
+	if !plan.FilePath.IsNull() {
 		fileReq = openai.FileRequest{
 			FilePath: plan.FilePath.ValueString(),
 			Purpose:  plan.Purpose.ValueString(),

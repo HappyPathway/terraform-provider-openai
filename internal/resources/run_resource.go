@@ -11,9 +11,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/sashabaranov/go-openai"
 )
 
@@ -118,6 +121,9 @@ func (r *RunResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 			"expires_at": schema.Int64Attribute{
 				Computed:            true,
 				MarkdownDescription: "Unix timestamp for when the run will expire.",
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"started_at": schema.Int64Attribute{
 				Computed:            true,
@@ -126,10 +132,16 @@ func (r *RunResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 			"cancelled_at": schema.Int64Attribute{
 				Computed:            true,
 				MarkdownDescription: "Unix timestamp for when the run was cancelled.",
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"failed_at": schema.Int64Attribute{
 				Computed:            true,
 				MarkdownDescription: "Unix timestamp for when the run failed.",
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"completed_at": schema.Int64Attribute{
 				Computed:            true,
@@ -138,6 +150,9 @@ func (r *RunResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 			"last_error": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The last error message if the run failed.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"steps": schema.ListAttribute{
 				ElementType:         types.StringType,
@@ -168,6 +183,9 @@ func (r *RunResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 				},
 				Computed:            true,
 				MarkdownDescription: "Details about any required actions needed to continue the run.",
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"metadata": schema.MapAttribute{
 				ElementType:         types.StringType,
@@ -178,11 +196,17 @@ func (r *RunResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 				MarkdownDescription: "The maximum number of tokens to use for prompts in this run. When using File Search tool, recommend setting to at least 50000 for best results.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"max_completion_tokens": schema.Int64Attribute{
 				MarkdownDescription: "The maximum number of tokens to generate in this run. If a completion reaches this limit, the run will terminate with a status of 'incomplete'.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"response_content": schema.StringAttribute{
 				Computed:            true,
@@ -191,6 +215,9 @@ func (r *RunResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 			"incomplete_details": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "Details about why the run was marked as incomplete, if applicable.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -222,13 +249,12 @@ func (r *RunResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	// Convert tools to OpenAI format if provided
 	var tools []openai.AssistantTool
-	if (!data.Tools.IsNull()) {
+	if !data.Tools.IsNull() {
 		var toolNames []string
 		resp.Diagnostics.Append(data.Tools.ElementsAs(ctx, &toolNames, false)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-
 		for _, toolName := range toolNames {
 			tools = append(tools, openai.AssistantTool{Type: openai.AssistantToolType(toolName)})
 		}
@@ -279,6 +305,24 @@ func (r *RunResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
+	// Store the thread ID and run ID for later use
+	threadID := data.ThreadID.ValueString()
+
+	// Update any associated messages with the run ID and assistant ID
+	messages, err := r.client.OpenAI.ListMessage(ctx, threadID, nil, nil, nil, nil, nil)
+	if err == nil && len(messages.Messages) > 0 {
+		// Get the most recent message
+		latestMsg := messages.Messages[0]
+		metadata := make(map[string]string)
+		metadata["run_id"] = run.ID
+		metadata["assistant_id"] = data.AssistantID.ValueString()
+
+		_, err = r.client.OpenAI.ModifyMessage(ctx, threadID, latestMsg.ID, metadata)
+		if err != nil {
+			tflog.Warn(ctx, fmt.Sprintf("Failed to update message with run ID: %v", err))
+		}
+	}
+
 	// Wait for completion if requested
 	waitForCompletion := true
 	if !data.WaitForCompletion.IsNull() {
@@ -323,7 +367,7 @@ func (r *RunResource) Create(ctx context.Context, req resource.CreateRequest, re
 				return
 			}
 
-			run, err = r.client.GetRun(ctx, run.ID)
+			run, err = r.client.GetRun(ctx, run.ID, threadID)
 			if err != nil {
 				resp.Diagnostics.AddError(
 					"Error Getting Run",
@@ -350,15 +394,143 @@ func (r *RunResource) Create(ctx context.Context, req resource.CreateRequest, re
 			default:
 				time.Sleep(pollingInterval)
 				continue
-				}
 			}
-		DONE:
+		}
+	DONE:
 	}
 
 	// Update Terraform state
 	data.ID = types.StringValue(run.ID)
 	data.Status = types.StringValue(string(run.Status))
 	data.CreatedAt = types.Int64Value(run.CreatedAt)
+	data.ThreadID = types.StringValue(run.ThreadID)
+	data.AssistantID = types.StringValue(run.AssistantID)
+
+	// Initialize computed fields with empty/zero values if not set
+	if run.ExpiresAt > 0 {
+		data.ExpiresAt = types.Int64Value(run.ExpiresAt)
+	} else {
+		data.ExpiresAt = types.Int64Value(0)
+	}
+
+	if run.StartedAt != nil && *run.StartedAt > 0 {
+		data.StartedAt = types.Int64Value(*run.StartedAt)
+	} else {
+		data.StartedAt = types.Int64Value(0)
+	}
+
+	if run.CancelledAt != nil && *run.CancelledAt > 0 {
+		data.CancelledAt = types.Int64Value(*run.CancelledAt)
+	} else {
+		data.CancelledAt = types.Int64Value(0)
+	}
+
+	if run.FailedAt != nil && *run.FailedAt > 0 {
+		data.FailedAt = types.Int64Value(*run.FailedAt)
+	} else {
+		data.FailedAt = types.Int64Value(0)
+	}
+
+	if run.CompletedAt != nil && *run.CompletedAt > 0 {
+		data.CompletedAt = types.Int64Value(*run.CompletedAt)
+	} else {
+		data.CompletedAt = types.Int64Value(0)
+	}
+
+	if run.LastError != nil {
+		data.LastError = types.StringValue(run.LastError.Message)
+	} else {
+		data.LastError = types.StringValue("")
+	}
+
+	if run.Status == openai.RunStatusIncomplete {
+		data.IncompleteDetails = types.StringValue("Run was marked incomplete due to token limit")
+	} else {
+		data.IncompleteDetails = types.StringValue("")
+	}
+
+	// Initialize these fields as empty strings if they're not set
+	if data.ResponseContent.IsNull() {
+		data.ResponseContent = types.StringValue("")
+	}
+
+	// Initialize max tokens fields
+	if run.MaxPromptTokens > 0 {
+		data.MaxPromptTokens = types.Int64Value(int64(run.MaxPromptTokens))
+	} else {
+		data.MaxPromptTokens = types.Int64Value(0)
+	}
+
+	if run.MaxCompletionTokens > 0 {
+		data.MaxCompletionTokens = types.Int64Value(int64(run.MaxCompletionTokens))
+	} else {
+		data.MaxCompletionTokens = types.Int64Value(0)
+	}
+
+	// Initialize required_action as an empty object
+	emptyReqAction := make(map[string]attr.Value)
+	emptyReqAction["type"] = types.StringValue("")
+	emptySubmitOutputs := make(map[string]attr.Value)
+	emptyToolCalls, diags := types.ListValueFrom(ctx, types.ObjectType{
+		AttrTypes: map[string]attr.Type{
+			"id":   types.StringType,
+			"type": types.StringType,
+			"function": types.ObjectType{
+				AttrTypes: map[string]attr.Type{
+					"name":      types.StringType,
+					"arguments": types.StringType,
+				},
+			},
+		},
+	}, []interface{}{})
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	emptySubmitOutputs["tool_calls"] = emptyToolCalls
+	emptyReqAction["submit_tool_outputs"] = types.ObjectValueMust(
+		map[string]attr.Type{
+			"tool_calls": types.ListType{
+				ElemType: types.ObjectType{
+					AttrTypes: map[string]attr.Type{
+						"id":       types.StringType,
+						"type":     types.StringType,
+						"function": types.ObjectType{
+							AttrTypes: map[string]attr.Type{
+								"name":      types.StringType,
+								"arguments": types.StringType,
+							},
+						},
+					},
+				},
+			},
+		},
+		emptySubmitOutputs,
+	)
+	data.RequiredAction = types.ObjectValueMust(
+		map[string]attr.Type{
+			"type":               types.StringType,
+			"submit_tool_outputs": types.ObjectType{
+				AttrTypes: map[string]attr.Type{
+					"tool_calls": types.ListType{
+						ElemType: types.ObjectType{
+							AttrTypes: map[string]attr.Type{
+								"id":       types.StringType,
+								"type":     types.StringType,
+								"function": types.ObjectType{
+									AttrTypes: map[string]attr.Type{
+										"name":      types.StringType,
+										"arguments": types.StringType,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		emptyReqAction,
+	)
 
 	// Get response content from thread messages if run completed successfully
 	if run.Status == openai.RunStatusCompleted {
@@ -425,7 +597,7 @@ func (r *RunResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
-	run, err := r.client.GetRun(ctx, data.ID.ValueString())
+	run, err := r.client.GetRun(ctx, data.ID.ValueString(), data.ThreadID.ValueString())
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
 			resp.State.RemoveResource(ctx)
@@ -443,21 +615,33 @@ func (r *RunResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	data.CreatedAt = types.Int64Value(run.CreatedAt)
 	if run.ExpiresAt > 0 {
 		data.ExpiresAt = types.Int64Value(run.ExpiresAt)
+	} else {
+		data.ExpiresAt = types.Int64Value(0)
 	}
 	if run.StartedAt != nil {
 		data.StartedAt = types.Int64Value(*run.StartedAt)
+	} else {
+		data.StartedAt = types.Int64Value(0)
 	}
 	if run.CancelledAt != nil {
 		data.CancelledAt = types.Int64Value(*run.CancelledAt)
+	} else {
+		data.CancelledAt = types.Int64Value(0)
 	}
 	if run.FailedAt != nil {
 		data.FailedAt = types.Int64Value(*run.FailedAt)
+	} else {
+		data.FailedAt = types.Int64Value(0)
 	}
 	if run.CompletedAt != nil {
 		data.CompletedAt = types.Int64Value(*run.CompletedAt)
+	} else {
+		data.CompletedAt = types.Int64Value(0)
 	}
 	if run.LastError != nil {
 		data.LastError = types.StringValue(run.LastError.Message)
+	} else {
+		data.LastError = types.StringValue("")
 	}
 
 	// Get response content from thread messages if run completed
@@ -508,20 +692,20 @@ func (r *RunResource) Update(ctx context.Context, req resource.UpdateRequest, re
 }
 
 func (r *RunResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data RunResourceModel
-	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+    var data RunResourceModel
+    resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+    if resp.Diagnostics.HasError() {
+        return
+    }
 
-	err := r.client.CancelRun(ctx, data.ID.ValueString())
-	if err != nil && !strings.Contains(err.Error(), "404") {
-		resp.Diagnostics.AddError(
-			"Error Cancelling Run",
-			fmt.Sprintf("Unable to cancel run: %s", err),
-		)
-		return
-	}
+    err := r.client.CancelRun(ctx, data.ID.ValueString(), data.ThreadID.ValueString())
+    if err != nil && !strings.Contains(err.Error(), "404") {
+        resp.Diagnostics.AddError(
+            "Error Cancelling Run",
+            fmt.Sprintf("Unable to cancel run: %s", err),
+        )
+        return
+    }
 }
 
 func (r *RunResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

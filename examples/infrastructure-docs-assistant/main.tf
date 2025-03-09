@@ -1,3 +1,15 @@
+terraform {
+  required_providers {
+    openai = {
+      source = "HappyPathway/openai"
+    }
+  }
+}
+
+provider "openai" {
+  # Configure the OpenAI Provider
+}
+
 # Upload documentation files for the assistant to use
 resource "openai_file" "terraform_docs" {
   filename  = "terraform-infrastructure.md"
@@ -32,14 +44,7 @@ resource "openai_assistant" "infra_docs" {
     - Suggest improvements to existing documentation
   EOT
 
-  tools = [
-    {
-      type = "code_interpreter"
-    },
-    {
-      type = "file_search"
-    }
-  ]
+  tools = ["code_interpreter", "file_search"]
 
   # In v2, files are attached through tool_resources
   tool_resources {
@@ -93,5 +98,5 @@ resource "openai_message" "init_docs" {
 
 # Output the assistant's analysis
 output "documentation_analysis" {
-  value = openai_message.init_docs.response_content
+  value = openai_message.init_docs
 }

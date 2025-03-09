@@ -61,3 +61,330 @@
 2025-03-07T15:12:47.336-0800 [TRACE] terraform fmt: Formatting <stdin>
 2025-03-07T15:12:47.336-0800 [DEBUG] Using modified User-Agent: Terraform/1.10.5 HashiCorp-terraform-exec/0.21.0
 2025-03-07T15:12:47.336-0800 [DEBUG] Using modified User-Agent: HashiCorp Terraform/1.10.5 (+https://www.terraform.io) HashiCorp-terraform-exec/0.21.0
+2025-03-08T19:22:21.812-0800 [INFO]  Terraform version: 1.10.5
+2025-03-08T19:22:21.812-0800 [DEBUG] using github.com/hashicorp/go-tfe v1.70.0
+2025-03-08T19:22:21.812-0800 [DEBUG] using github.com/hashicorp/hcl/v2 v2.23.0
+2025-03-08T19:22:21.812-0800 [DEBUG] using github.com/hashicorp/terraform-svchost v0.1.1
+2025-03-08T19:22:21.812-0800 [DEBUG] using github.com/zclconf/go-cty v1.16.2
+2025-03-08T19:22:21.812-0800 [INFO]  Go runtime version: go1.23.3
+2025-03-08T19:22:21.812-0800 [INFO]  CLI args: []string{"/usr/local/Cellar/tfenv/1.0.2/versions/1.10.5/terraform", "version", "-json"}
+2025-03-08T19:22:21.812-0800 [TRACE] Stdout is not a terminal
+2025-03-08T19:22:21.812-0800 [TRACE] Stderr is not a terminal
+2025-03-08T19:22:21.812-0800 [TRACE] Stdin is not a terminal
+2025-03-08T19:22:21.812-0800 [DEBUG] Attempting to open CLI config file: /Users/darnold/.terraformrc
+2025-03-08T19:22:21.812-0800 [INFO]  Loading CLI configuration from /Users/darnold/.terraformrc
+2025-03-08T19:22:21.812-0800 [INFO]  Loading CLI configuration from /Users/darnold/.terraform.d/credentials.tfrc.json
+2025-03-08T19:22:21.812-0800 [DEBUG] checking for credentials in "/Users/darnold/.terraform.d/plugins"
+2025-03-08T19:22:21.813-0800 [DEBUG] checking for credentials in "/Users/darnold/.terraform.d/plugins/darwin_amd64"
+2025-03-08T19:22:21.813-0800 [DEBUG] Using modified User-Agent: HashiCorp Terraform/1.10.5 (+https://www.terraform.io) HashiCorp-terraform-exec/0.21.0
+2025-03-08T19:22:21.813-0800 [DEBUG] ignoring non-existing provider search directory terraform.d/plugins
+2025-03-08T19:22:21.813-0800 [DEBUG] will search for provider plugins in /Users/darnold/.terraform.d/plugins
+2025-03-08T19:22:21.813-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:22:21.813-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0/darwin_amd64" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:22:21.813-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0/darwin_amd64/terraform-provider-openai" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:22:21.813-0800 [WARN]  Provider plugin search ignored symlink /Users/darnold/.terraform.d/plugins/darwin_amd64/terraform-provider-configstash: only the base directory /Users/darnold/.terraform.d/plugins may be a symlink
+2025-03-08T19:22:21.814-0800 [TRACE] getproviders.SearchLocalDirectory: found hashicorp.com/edu/hashicups v0.3.1 for darwin_amd64 at /Users/darnold/.terraform.d/plugins/hashicorp.com/edu/hashicups/0.3.1/darwin_amd64
+2025-03-08T19:22:21.814-0800 [WARN]  ignoring local provider path "/Users/darnold/.terraform.d/plugins/registry.terraform.io/darnold/openai/3b6fef8/darwin_amd64" with invalid version "3b6fef8": invalid characters "b6fef8"
+2025-03-08T19:22:21.814-0800 [WARN]  ignoring local provider path "/Users/darnold/.terraform.d/plugins/registry.terraform.io/darnold/openai/70f25a4/darwin_amd64" with invalid version "70f25a4": invalid characters "f25a4"
+2025-03-08T19:22:21.814-0800 [TRACE] getproviders.SearchLocalDirectory: found registry.terraform.io/happypathway/openai v5.0.0 for darwin_amd64 at /Users/darnold/.terraform.d/plugins/registry.terraform.io/happypathway/openai/5.0.0/darwin_amd64
+2025-03-08T19:22:21.814-0800 [DEBUG] ignoring non-existing provider search directory /Users/darnold/Library/Application Support/io.terraform/plugins
+2025-03-08T19:22:21.814-0800 [DEBUG] ignoring non-existing provider search directory /Library/Application Support/io.terraform/plugins
+2025-03-08T19:22:21.817-0800 [INFO]  Checkpoint disabled. Not running.
+2025-03-08T19:22:21.818-0800 [INFO]  CLI command args: []string{"version", "-json"}
+2025-03-08T19:22:21.968-0800 [INFO]  Terraform version: 1.10.5
+2025-03-08T19:22:21.968-0800 [DEBUG] using github.com/hashicorp/go-tfe v1.70.0
+2025-03-08T19:22:21.968-0800 [DEBUG] using github.com/hashicorp/hcl/v2 v2.23.0
+2025-03-08T19:22:21.968-0800 [DEBUG] using github.com/hashicorp/terraform-svchost v0.1.1
+2025-03-08T19:22:21.968-0800 [DEBUG] using github.com/zclconf/go-cty v1.16.2
+2025-03-08T19:22:21.968-0800 [INFO]  Go runtime version: go1.23.3
+2025-03-08T19:22:21.968-0800 [INFO]  CLI args: []string{"/usr/local/Cellar/tfenv/1.0.2/versions/1.10.5/terraform", "fmt", "-no-color", "-"}
+2025-03-08T19:22:21.968-0800 [TRACE] Stdout is not a terminal
+2025-03-08T19:22:21.968-0800 [TRACE] Stderr is not a terminal
+2025-03-08T19:22:21.968-0800 [TRACE] Stdin is not a terminal
+2025-03-08T19:22:21.968-0800 [DEBUG] Attempting to open CLI config file: /Users/darnold/.terraformrc
+2025-03-08T19:22:21.968-0800 [INFO]  Loading CLI configuration from /Users/darnold/.terraformrc
+2025-03-08T19:22:21.968-0800 [INFO]  Loading CLI configuration from /Users/darnold/.terraform.d/credentials.tfrc.json
+2025-03-08T19:22:21.968-0800 [DEBUG] checking for credentials in "/Users/darnold/.terraform.d/plugins"
+2025-03-08T19:22:21.968-0800 [DEBUG] checking for credentials in "/Users/darnold/.terraform.d/plugins/darwin_amd64"
+2025-03-08T19:22:21.968-0800 [DEBUG] Using modified User-Agent: HashiCorp Terraform/1.10.5 (+https://www.terraform.io) HashiCorp-terraform-exec/0.21.0
+2025-03-08T19:22:21.968-0800 [DEBUG] ignoring non-existing provider search directory terraform.d/plugins
+2025-03-08T19:22:21.968-0800 [DEBUG] will search for provider plugins in /Users/darnold/.terraform.d/plugins
+2025-03-08T19:22:21.968-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:22:21.968-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0/darwin_amd64" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:22:21.968-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0/darwin_amd64/terraform-provider-openai" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:22:21.968-0800 [WARN]  Provider plugin search ignored symlink /Users/darnold/.terraform.d/plugins/darwin_amd64/terraform-provider-configstash: only the base directory /Users/darnold/.terraform.d/plugins may be a symlink
+2025-03-08T19:22:21.969-0800 [TRACE] getproviders.SearchLocalDirectory: found hashicorp.com/edu/hashicups v0.3.1 for darwin_amd64 at /Users/darnold/.terraform.d/plugins/hashicorp.com/edu/hashicups/0.3.1/darwin_amd64
+2025-03-08T19:22:21.969-0800 [WARN]  ignoring local provider path "/Users/darnold/.terraform.d/plugins/registry.terraform.io/darnold/openai/3b6fef8/darwin_amd64" with invalid version "3b6fef8": invalid characters "b6fef8"
+2025-03-08T19:22:21.969-0800 [WARN]  ignoring local provider path "/Users/darnold/.terraform.d/plugins/registry.terraform.io/darnold/openai/70f25a4/darwin_amd64" with invalid version "70f25a4": invalid characters "f25a4"
+2025-03-08T19:22:21.969-0800 [TRACE] getproviders.SearchLocalDirectory: found registry.terraform.io/happypathway/openai v5.0.0 for darwin_amd64 at /Users/darnold/.terraform.d/plugins/registry.terraform.io/happypathway/openai/5.0.0/darwin_amd64
+2025-03-08T19:22:21.969-0800 [DEBUG] ignoring non-existing provider search directory /Users/darnold/Library/Application Support/io.terraform/plugins
+2025-03-08T19:22:21.969-0800 [DEBUG] ignoring non-existing provider search directory /Library/Application Support/io.terraform/plugins
+2025-03-08T19:22:21.972-0800 [INFO]  Checkpoint disabled. Not running.
+2025-03-08T19:22:21.974-0800 [INFO]  CLI command args: []string{"fmt", "-no-color", "-"}
+2025-03-08T19:22:21.975-0800 [TRACE] terraform fmt: Formatting <stdin>
+2025-03-08T19:22:21.975-0800 [DEBUG] Using modified User-Agent: Terraform/1.10.5 HashiCorp-terraform-exec/0.21.0
+2025-03-08T19:22:21.975-0800 [DEBUG] Using modified User-Agent: HashiCorp Terraform/1.10.5 (+https://www.terraform.io) HashiCorp-terraform-exec/0.21.0
+2025-03-08T19:23:52.881-0800 [INFO]  Terraform version: 1.10.5
+2025-03-08T19:23:52.881-0800 [DEBUG] using github.com/hashicorp/go-tfe v1.70.0
+2025-03-08T19:23:52.881-0800 [DEBUG] using github.com/hashicorp/hcl/v2 v2.23.0
+2025-03-08T19:23:52.881-0800 [DEBUG] using github.com/hashicorp/terraform-svchost v0.1.1
+2025-03-08T19:23:52.881-0800 [DEBUG] using github.com/zclconf/go-cty v1.16.2
+2025-03-08T19:23:52.881-0800 [INFO]  Go runtime version: go1.23.3
+2025-03-08T19:23:52.881-0800 [INFO]  CLI args: []string{"/usr/local/Cellar/tfenv/1.0.2/versions/1.10.5/terraform", "providers", "schema", "-json", "-no-color"}
+2025-03-08T19:23:52.881-0800 [TRACE] Stdout is not a terminal
+2025-03-08T19:23:52.881-0800 [TRACE] Stderr is not a terminal
+2025-03-08T19:23:52.881-0800 [TRACE] Stdin is not a terminal
+2025-03-08T19:23:52.881-0800 [DEBUG] Attempting to open CLI config file: /Users/darnold/.terraformrc
+2025-03-08T19:23:52.881-0800 [INFO]  Loading CLI configuration from /Users/darnold/.terraformrc
+2025-03-08T19:23:52.882-0800 [INFO]  Loading CLI configuration from /Users/darnold/.terraform.d/credentials.tfrc.json
+2025-03-08T19:23:52.882-0800 [DEBUG] checking for credentials in "/Users/darnold/.terraform.d/plugins"
+2025-03-08T19:23:52.882-0800 [DEBUG] checking for credentials in "/Users/darnold/.terraform.d/plugins/darwin_amd64"
+2025-03-08T19:23:52.882-0800 [DEBUG] Using modified User-Agent: HashiCorp Terraform/1.10.5 (+https://www.terraform.io) HashiCorp-terraform-exec/0.21.0
+2025-03-08T19:23:52.882-0800 [DEBUG] ignoring non-existing provider search directory terraform.d/plugins
+2025-03-08T19:23:52.882-0800 [DEBUG] will search for provider plugins in /Users/darnold/.terraform.d/plugins
+2025-03-08T19:23:52.882-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:23:52.882-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0/darwin_amd64" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:23:52.882-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0/darwin_amd64/terraform-provider-openai" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:23:52.882-0800 [WARN]  Provider plugin search ignored symlink /Users/darnold/.terraform.d/plugins/darwin_amd64/terraform-provider-configstash: only the base directory /Users/darnold/.terraform.d/plugins may be a symlink
+2025-03-08T19:23:52.883-0800 [TRACE] getproviders.SearchLocalDirectory: found hashicorp.com/edu/hashicups v0.3.1 for darwin_amd64 at /Users/darnold/.terraform.d/plugins/hashicorp.com/edu/hashicups/0.3.1/darwin_amd64
+2025-03-08T19:23:52.883-0800 [WARN]  ignoring local provider path "/Users/darnold/.terraform.d/plugins/registry.terraform.io/darnold/openai/3b6fef8/darwin_amd64" with invalid version "3b6fef8": invalid characters "b6fef8"
+2025-03-08T19:23:52.883-0800 [WARN]  ignoring local provider path "/Users/darnold/.terraform.d/plugins/registry.terraform.io/darnold/openai/70f25a4/darwin_amd64" with invalid version "70f25a4": invalid characters "f25a4"
+2025-03-08T19:23:52.883-0800 [TRACE] getproviders.SearchLocalDirectory: found registry.terraform.io/happypathway/openai v5.0.0 for darwin_amd64 at /Users/darnold/.terraform.d/plugins/registry.terraform.io/happypathway/openai/5.0.0/darwin_amd64
+2025-03-08T19:23:52.883-0800 [DEBUG] ignoring non-existing provider search directory /Users/darnold/Library/Application Support/io.terraform/plugins
+2025-03-08T19:23:52.883-0800 [DEBUG] ignoring non-existing provider search directory /Library/Application Support/io.terraform/plugins
+2025-03-08T19:23:52.886-0800 [INFO]  Checkpoint disabled. Not running.
+2025-03-08T19:23:52.888-0800 [INFO]  CLI command args: []string{"providers", "schema", "-json", "-no-color"}
+2025-03-08T19:23:52.888-0800 [DEBUG] Using modified User-Agent: Terraform/1.10.5 HashiCorp-terraform-exec/0.21.0
+2025-03-08T19:23:52.888-0800 [DEBUG] Using modified User-Agent: HashiCorp Terraform/1.10.5 (+https://www.terraform.io) HashiCorp-terraform-exec/0.21.0
+2025-03-08T19:23:52.890-0800 [TRACE] Meta.Backend: no config given or present on disk, so returning nil config
+2025-03-08T19:23:52.890-0800 [TRACE] Meta.Backend: backend has not previously been initialized in this working directory
+2025-03-08T19:23:52.890-0800 [TRACE] Meta.Backend: using default local state only (no backend configuration, and no existing initialized backend)
+2025-03-08T19:23:52.890-0800 [TRACE] Meta.Backend: instantiated backend of type <nil>
+2025-03-08T19:23:52.890-0800 [TRACE] providercache.fillMetaCache: scanning directory .terraform/providers
+2025-03-08T19:23:52.890-0800 [TRACE] getproviders.SearchLocalDirectory: found registry.terraform.io/happypathway/openai v5.0.0 for darwin_amd64 at .terraform/providers/registry.terraform.io/happypathway/openai/5.0.0/darwin_amd64
+2025-03-08T19:23:52.890-0800 [TRACE] providercache.fillMetaCache: including .terraform/providers/registry.terraform.io/happypathway/openai/5.0.0/darwin_amd64 as a candidate package for registry.terraform.io/happypathway/openai 5.0.0
+2025-03-08T19:23:52.971-0800 [DEBUG] checking for provisioner in "."
+2025-03-08T19:23:52.971-0800 [DEBUG] checking for provisioner in "/usr/local/Cellar/tfenv/1.0.2/versions/1.10.5"
+2025-03-08T19:23:52.971-0800 [DEBUG] checking for provisioner in "/Users/darnold/.terraform.d/plugins"
+2025-03-08T19:23:52.971-0800 [DEBUG] checking for provisioner in "/Users/darnold/.terraform.d/plugins/darwin_amd64"
+2025-03-08T19:23:52.972-0800 [TRACE] Meta.Backend: backend <nil> does not support operations, so wrapping it in a local backend
+2025-03-08T19:23:52.981-0800 [TRACE] backend/local: requesting state manager for workspace "default"
+2025-03-08T19:23:52.981-0800 [TRACE] backend/local: state manager for workspace "default" will:
+ - read initial snapshot from terraform.tfstate
+ - write new snapshots to terraform.tfstate
+ - create any backup at terraform.tfstate.backup
+2025-03-08T19:23:52.981-0800 [TRACE] backend/local: requesting state lock for workspace "default"
+2025-03-08T19:23:52.981-0800 [TRACE] backend/local: reading remote state for workspace "default"
+2025-03-08T19:23:52.981-0800 [TRACE] statemgr.Filesystem: reading initial snapshot from terraform.tfstate
+2025-03-08T19:23:52.981-0800 [TRACE] statemgr.Filesystem: snapshot file has nil snapshot, but that's okay
+2025-03-08T19:23:52.981-0800 [TRACE] statemgr.Filesystem: read nil snapshot
+2025-03-08T19:23:52.981-0800 [TRACE] backend/local: populating backendrun.LocalRun for current working directory
+2025-03-08T19:23:52.996-0800 [TRACE] Config.VerifyDependencySelections: provider registry.terraform.io/happypathway/openai has 5.0.0 to satisfy ""
+2025-03-08T19:23:52.997-0800 [TRACE] terraform.NewContext: starting
+2025-03-08T19:23:52.997-0800 [TRACE] terraform.NewContext: complete
+2025-03-08T19:23:52.998-0800 [TRACE] LoadSchemas: retrieving schema for provider type "registry.terraform.io/happypathway/openai"
+2025-03-08T19:23:52.998-0800 [TRACE] terraform.contextPlugins: Initializing provider "registry.terraform.io/happypathway/openai" to read its schema
+2025-03-08T19:23:52.998-0800 [DEBUG] created provider logger: level=trace
+2025-03-08T19:23:52.998-0800 [INFO]  provider: configuring client automatic mTLS
+2025-03-08T19:23:53.027-0800 [DEBUG] provider: starting plugin: path=.terraform/providers/registry.terraform.io/happypathway/openai/5.0.0/darwin_amd64/terraform-provider-openai args=[".terraform/providers/registry.terraform.io/happypathway/openai/5.0.0/darwin_amd64/terraform-provider-openai"]
+2025-03-08T19:23:53.036-0800 [DEBUG] provider: plugin started: path=.terraform/providers/registry.terraform.io/happypathway/openai/5.0.0/darwin_amd64/terraform-provider-openai pid=28846
+2025-03-08T19:23:53.037-0800 [DEBUG] provider: waiting for RPC address: plugin=.terraform/providers/registry.terraform.io/happypathway/openai/5.0.0/darwin_amd64/terraform-provider-openai
+2025-03-08T19:23:53.050-0800 [INFO]  provider.terraform-provider-openai: configuring server automatic mTLS: timestamp=2025-03-08T19:23:53.047-0800
+2025-03-08T19:23:53.059-0800 [DEBUG] provider.terraform-provider-openai: plugin address: address=/var/folders/bl/3m8n98q9675fvvnglrsp46gh0000gn/T/plugin1953469398 network=unix timestamp=2025-03-08T19:23:53.059-0800
+2025-03-08T19:23:53.060-0800 [DEBUG] provider: using plugin: version=6
+2025-03-08T19:23:53.097-0800 [TRACE] provider.stdio: waiting for stdio data
+2025-03-08T19:23:53.099-0800 [TRACE] GRPCProvider.v6: GetProviderSchema
+2025-03-08T19:23:53.100-0800 [TRACE] provider.terraform-provider-openai: Received request: @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-go@v0.26.0/tfprotov6/tf6server/server.go:522 @module=sdk.proto tf_proto_version=6.8 tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.100-0800 [TRACE] provider.terraform-provider-openai: Sending request downstream: tf_provider_addr=registry.terraform.io/darnold/openai tf_rpc=GetProviderSchema @module=sdk.proto tf_proto_version=6.8 tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-go@v0.26.0/tfprotov6/internal/tf6serverlogging/downstream_request.go:22 timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.100-0800 [TRACE] provider.terraform-provider-openai: Checking ProviderSchema lock: @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:389 timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.100-0800 [TRACE] provider.terraform-provider-openai: Calling provider defined Provider Schema: tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:400 @module=sdk.framework timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.100-0800 [TRACE] provider.terraform-provider-openai: Called provider defined Provider Schema: @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:402 timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.100-0800 [TRACE] provider.terraform-provider-openai: Checking ResourceTypes lock: tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:539 @module=sdk.framework timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.100-0800 [TRACE] provider.terraform-provider-openai: Checking ProviderTypeName lock: @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:366 @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.100-0800 [TRACE] provider.terraform-provider-openai: Calling provider defined Provider Metadata: tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:377 @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.100-0800 [TRACE] provider.terraform-provider-openai: Called provider defined Provider Metadata: @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:379 timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.100-0800 [TRACE] provider.terraform-provider-openai: Calling provider defined Provider Resources: tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:550 @module=sdk.framework timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.100-0800 [TRACE] provider.terraform-provider-openai: Called provider defined Provider Resources: tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:552 @module=sdk.framework timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.100-0800 [TRACE] provider.terraform-provider-openai: Found resource type: @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:573 tf_resource_type=openai_assistant timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.100-0800 [TRACE] provider.terraform-provider-openai: Found resource type: tf_rpc=GetProviderSchema @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_resource_type=openai_chat_completion @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:573 timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.100-0800 [TRACE] provider.terraform-provider-openai: Found resource type: @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:573 @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_resource_type=openai_embedding tf_rpc=GetProviderSchema timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.100-0800 [TRACE] provider.terraform-provider-openai: Found resource type: @module=sdk.framework tf_resource_type=openai_file tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:573 tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.100-0800 [TRACE] provider.terraform-provider-openai: Found resource type: tf_provider_addr=registry.terraform.io/darnold/openai tf_resource_type=openai_fine_tune @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:573 @module=sdk.framework tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.100-0800 [TRACE] provider.terraform-provider-openai: Found resource type: @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:573 tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_resource_type=openai_message tf_rpc=GetProviderSchema @module=sdk.framework timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.100-0800 [TRACE] provider.terraform-provider-openai: Found resource type: @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:573 @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_resource_type=openai_run tf_rpc=GetProviderSchema timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.100-0800 [TRACE] provider.terraform-provider-openai: Found resource type: tf_resource_type=openai_thread tf_rpc=GetProviderSchema @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:573 timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Found resource type: @module=sdk.framework tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_resource_type=openai_vector_store tf_provider_addr=registry.terraform.io/darnold/openai tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:573 timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Found resource type: @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:573 @module=sdk.framework tf_rpc=GetProviderSchema tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_resource_type=openai_vector_store_file timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Calling provider defined Resource Schema method: tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_resource_type=openai_vector_store_file @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:669 tf_provider_addr=registry.terraform.io/darnold/openai tf_rpc=GetProviderSchema @module=sdk.framework timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Called provider defined Resource Schema method: tf_resource_type=openai_vector_store_file tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:671 @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 timestamp=2025-03-08T19:23:53.100-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Calling provider defined Resource Schema method: @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:669 @module=sdk.framework tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_resource_type=openai_chat_completion tf_provider_addr=registry.terraform.io/darnold/openai tf_rpc=GetProviderSchema timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Called provider defined Resource Schema method: tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:671 tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_resource_type=openai_chat_completion @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Calling provider defined Resource Schema method: tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema tf_provider_addr=registry.terraform.io/darnold/openai tf_resource_type=openai_embedding @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:669 @module=sdk.framework timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Called provider defined Resource Schema method: @module=sdk.framework tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:671 tf_provider_addr=registry.terraform.io/darnold/openai tf_resource_type=openai_embedding tf_rpc=GetProviderSchema timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Calling provider defined Resource Schema method: tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:669 @module=sdk.framework tf_resource_type=openai_file timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Called provider defined Resource Schema method: tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_resource_type=openai_file @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:671 timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Calling provider defined Resource Schema method: @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_resource_type=openai_fine_tune @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:669 tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Called provider defined Resource Schema method: tf_rpc=GetProviderSchema @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_resource_type=openai_fine_tune @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:671 tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Calling provider defined Resource Schema method: @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_resource_type=openai_vector_store tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:669 tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Called provider defined Resource Schema method: tf_resource_type=openai_vector_store tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:671 @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Calling provider defined Resource Schema method: @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_resource_type=openai_assistant @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:669 tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Called provider defined Resource Schema method: tf_provider_addr=registry.terraform.io/darnold/openai tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:671 @module=sdk.framework tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_resource_type=openai_assistant timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Calling provider defined Resource Schema method: tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_resource_type=openai_message tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:669 @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Called provider defined Resource Schema method: @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:671 tf_rpc=GetProviderSchema tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_resource_type=openai_message @module=sdk.framework timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Calling provider defined Resource Schema method: @module=sdk.framework tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:669 tf_provider_addr=registry.terraform.io/darnold/openai tf_resource_type=openai_run timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Called provider defined Resource Schema method: @module=sdk.framework @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:671 tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_resource_type=openai_run tf_rpc=GetProviderSchema timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Calling provider defined Resource Schema method: @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:669 tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_resource_type=openai_thread timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Called provider defined Resource Schema method: tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:671 @module=sdk.framework tf_resource_type=openai_thread tf_rpc=GetProviderSchema timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Checking DataSourceTypes lock: tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:210 @module=sdk.framework timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Checking ProviderTypeName lock: @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:366 timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Calling provider defined Provider DataSources: tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:221 @module=sdk.framework timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Called provider defined Provider DataSources: tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:223 @module=sdk.framework timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Found data source type: @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:244 tf_rpc=GetProviderSchema @module=sdk.framework tf_data_source_type=openai_model tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Found data source type: @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_data_source_type=openai_assistant tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:244 timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Found data source type: tf_data_source_type=openai_chat_completion tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:244 tf_rpc=GetProviderSchema @module=sdk.framework timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Found data source type: @module=sdk.framework tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:244 tf_data_source_type=openai_vector_store tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Calling provider defined DataSource Schema: @module=sdk.framework tf_data_source_type=openai_model tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:340 tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Called provider defined DataSource Schema: @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:342 tf_data_source_type=openai_model tf_rpc=GetProviderSchema tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 @module=sdk.framework timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Calling provider defined DataSource Schema: tf_data_source_type=openai_assistant @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:340 @module=sdk.framework tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema tf_provider_addr=registry.terraform.io/darnold/openai timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Called provider defined DataSource Schema: @module=sdk.framework tf_data_source_type=openai_assistant @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:342 tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Calling provider defined DataSource Schema: @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:340 @module=sdk.framework tf_data_source_type=openai_chat_completion tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Called provider defined DataSource Schema: tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema tf_provider_addr=registry.terraform.io/darnold/openai @module=sdk.framework tf_data_source_type=openai_chat_completion @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:342 timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Calling provider defined DataSource Schema: tf_data_source_type=openai_vector_store tf_provider_addr=registry.terraform.io/darnold/openai @module=sdk.framework tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:340 timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Called provider defined DataSource Schema: tf_data_source_type=openai_vector_store tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:342 @module=sdk.framework tf_rpc=GetProviderSchema timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Checking FunctionTypes lock: @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server_functions.go:124 timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Checking EphemeralResourceFuncs lock: tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server_ephemeralresources.go:38 @module=sdk.framework timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.101-0800 [TRACE] provider.terraform-provider-openai: Checking ProviderTypeName lock: @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-framework@v1.14.1/internal/fwserver/server.go:366 @module=sdk.framework tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.102-0800 [TRACE] provider.terraform-provider-openai: Received downstream response: @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-go@v0.26.0/tfprotov6/internal/tf6serverlogging/downstream_request.go:42 diagnostic_warning_count=0 tf_provider_addr=registry.terraform.io/darnold/openai tf_req_duration_ms=1 tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 @module=sdk.proto diagnostic_error_count=0 tf_proto_version=6.8 tf_rpc=GetProviderSchema timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.103-0800 [TRACE] provider.terraform-provider-openai: Announced server capabilities: tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_server_capability_move_resource_state=true tf_server_capability_plan_destroy=true @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-go@v0.26.0/tfprotov6/internal/tf6serverlogging/server_capabilities.go:27 @module=sdk.proto tf_rpc=GetProviderSchema tf_server_capability_get_provider_schema_optional=true tf_proto_version=6.8 timestamp=2025-03-08T19:23:53.101-0800
+2025-03-08T19:23:53.103-0800 [TRACE] provider.terraform-provider-openai: Served request: tf_proto_version=6.8 tf_provider_addr=registry.terraform.io/darnold/openai tf_req_id=00db0cbe-c976-5ff9-aec5-bbd95ecae324 tf_rpc=GetProviderSchema @caller=/Users/darnold/go/pkg/mod/github.com/hashicorp/terraform-plugin-go@v0.26.0/tfprotov6/tf6server/server.go:541 @module=sdk.proto timestamp=2025-03-08T19:23:53.102-0800
+2025-03-08T19:23:53.109-0800 [DEBUG] No provider meta schema returned
+2025-03-08T19:23:53.113-0800 [TRACE] GRPCProvider.v6: Close
+2025-03-08T19:23:53.116-0800 [DEBUG] provider.stdio: received EOF, stopping recv loop: err="rpc error: code = Unavailable desc = error reading from server: EOF"
+2025-03-08T19:23:53.116-0800 [INFO]  provider: plugin process exited: plugin=.terraform/providers/registry.terraform.io/happypathway/openai/5.0.0/darwin_amd64/terraform-provider-openai id=28846
+2025-03-08T19:23:53.118-0800 [DEBUG] provider: plugin exited
+2025-03-08T19:24:23.124-0800 [INFO]  Terraform version: 1.10.5
+2025-03-08T19:24:23.125-0800 [DEBUG] using github.com/hashicorp/go-tfe v1.70.0
+2025-03-08T19:24:23.125-0800 [DEBUG] using github.com/hashicorp/hcl/v2 v2.23.0
+2025-03-08T19:24:23.125-0800 [DEBUG] using github.com/hashicorp/terraform-svchost v0.1.1
+2025-03-08T19:24:23.125-0800 [DEBUG] using github.com/zclconf/go-cty v1.16.2
+2025-03-08T19:24:23.125-0800 [INFO]  Go runtime version: go1.23.3
+2025-03-08T19:24:23.125-0800 [INFO]  CLI args: []string{"/usr/local/Cellar/tfenv/1.0.2/versions/1.10.5/terraform", "version", "-json"}
+2025-03-08T19:24:23.125-0800 [TRACE] Stdout is not a terminal
+2025-03-08T19:24:23.125-0800 [TRACE] Stderr is not a terminal
+2025-03-08T19:24:23.125-0800 [TRACE] Stdin is not a terminal
+2025-03-08T19:24:23.125-0800 [DEBUG] Attempting to open CLI config file: /Users/darnold/.terraformrc
+2025-03-08T19:24:23.125-0800 [INFO]  Loading CLI configuration from /Users/darnold/.terraformrc
+2025-03-08T19:24:23.125-0800 [INFO]  Loading CLI configuration from /Users/darnold/.terraform.d/credentials.tfrc.json
+2025-03-08T19:24:23.125-0800 [DEBUG] checking for credentials in "/Users/darnold/.terraform.d/plugins"
+2025-03-08T19:24:23.125-0800 [DEBUG] checking for credentials in "/Users/darnold/.terraform.d/plugins/darwin_amd64"
+2025-03-08T19:24:23.125-0800 [DEBUG] Using modified User-Agent: HashiCorp Terraform/1.10.5 (+https://www.terraform.io) HashiCorp-terraform-exec/0.21.0
+2025-03-08T19:24:23.125-0800 [DEBUG] ignoring non-existing provider search directory terraform.d/plugins
+2025-03-08T19:24:23.125-0800 [DEBUG] will search for provider plugins in /Users/darnold/.terraform.d/plugins
+2025-03-08T19:24:23.125-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:24:23.125-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0/darwin_amd64" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:24:23.125-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0/darwin_amd64/terraform-provider-openai" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:24:23.125-0800 [WARN]  Provider plugin search ignored symlink /Users/darnold/.terraform.d/plugins/darwin_amd64/terraform-provider-configstash: only the base directory /Users/darnold/.terraform.d/plugins may be a symlink
+2025-03-08T19:24:23.126-0800 [TRACE] getproviders.SearchLocalDirectory: found hashicorp.com/edu/hashicups v0.3.1 for darwin_amd64 at /Users/darnold/.terraform.d/plugins/hashicorp.com/edu/hashicups/0.3.1/darwin_amd64
+2025-03-08T19:24:23.126-0800 [WARN]  ignoring local provider path "/Users/darnold/.terraform.d/plugins/registry.terraform.io/darnold/openai/3b6fef8/darwin_amd64" with invalid version "3b6fef8": invalid characters "b6fef8"
+2025-03-08T19:24:23.126-0800 [WARN]  ignoring local provider path "/Users/darnold/.terraform.d/plugins/registry.terraform.io/darnold/openai/70f25a4/darwin_amd64" with invalid version "70f25a4": invalid characters "f25a4"
+2025-03-08T19:24:23.126-0800 [TRACE] getproviders.SearchLocalDirectory: found registry.terraform.io/happypathway/openai v5.0.0 for darwin_amd64 at /Users/darnold/.terraform.d/plugins/registry.terraform.io/happypathway/openai/5.0.0/darwin_amd64
+2025-03-08T19:24:23.126-0800 [DEBUG] ignoring non-existing provider search directory /Users/darnold/Library/Application Support/io.terraform/plugins
+2025-03-08T19:24:23.126-0800 [DEBUG] ignoring non-existing provider search directory /Library/Application Support/io.terraform/plugins
+2025-03-08T19:24:23.129-0800 [INFO]  Checkpoint disabled. Not running.
+2025-03-08T19:24:23.130-0800 [INFO]  CLI command args: []string{"version", "-json"}
+2025-03-08T19:24:23.287-0800 [INFO]  Terraform version: 1.10.5
+2025-03-08T19:24:23.287-0800 [DEBUG] using github.com/hashicorp/go-tfe v1.70.0
+2025-03-08T19:24:23.287-0800 [DEBUG] using github.com/hashicorp/hcl/v2 v2.23.0
+2025-03-08T19:24:23.287-0800 [DEBUG] using github.com/hashicorp/terraform-svchost v0.1.1
+2025-03-08T19:24:23.287-0800 [DEBUG] using github.com/zclconf/go-cty v1.16.2
+2025-03-08T19:24:23.287-0800 [INFO]  Go runtime version: go1.23.3
+2025-03-08T19:24:23.287-0800 [INFO]  CLI args: []string{"/usr/local/Cellar/tfenv/1.0.2/versions/1.10.5/terraform", "fmt", "-no-color", "-"}
+2025-03-08T19:24:23.287-0800 [TRACE] Stdout is not a terminal
+2025-03-08T19:24:23.287-0800 [TRACE] Stderr is not a terminal
+2025-03-08T19:24:23.287-0800 [TRACE] Stdin is not a terminal
+2025-03-08T19:24:23.287-0800 [DEBUG] Attempting to open CLI config file: /Users/darnold/.terraformrc
+2025-03-08T19:24:23.287-0800 [INFO]  Loading CLI configuration from /Users/darnold/.terraformrc
+2025-03-08T19:24:23.288-0800 [INFO]  Loading CLI configuration from /Users/darnold/.terraform.d/credentials.tfrc.json
+2025-03-08T19:24:23.288-0800 [DEBUG] checking for credentials in "/Users/darnold/.terraform.d/plugins"
+2025-03-08T19:24:23.288-0800 [DEBUG] checking for credentials in "/Users/darnold/.terraform.d/plugins/darwin_amd64"
+2025-03-08T19:24:23.288-0800 [DEBUG] Using modified User-Agent: HashiCorp Terraform/1.10.5 (+https://www.terraform.io) HashiCorp-terraform-exec/0.21.0
+2025-03-08T19:24:23.288-0800 [DEBUG] ignoring non-existing provider search directory terraform.d/plugins
+2025-03-08T19:24:23.288-0800 [DEBUG] will search for provider plugins in /Users/darnold/.terraform.d/plugins
+2025-03-08T19:24:23.288-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:24:23.288-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0/darwin_amd64" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:24:23.288-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0/darwin_amd64/terraform-provider-openai" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:24:23.288-0800 [WARN]  Provider plugin search ignored symlink /Users/darnold/.terraform.d/plugins/darwin_amd64/terraform-provider-configstash: only the base directory /Users/darnold/.terraform.d/plugins may be a symlink
+2025-03-08T19:24:23.289-0800 [TRACE] getproviders.SearchLocalDirectory: found hashicorp.com/edu/hashicups v0.3.1 for darwin_amd64 at /Users/darnold/.terraform.d/plugins/hashicorp.com/edu/hashicups/0.3.1/darwin_amd64
+2025-03-08T19:24:23.289-0800 [WARN]  ignoring local provider path "/Users/darnold/.terraform.d/plugins/registry.terraform.io/darnold/openai/3b6fef8/darwin_amd64" with invalid version "3b6fef8": invalid characters "b6fef8"
+2025-03-08T19:24:23.289-0800 [WARN]  ignoring local provider path "/Users/darnold/.terraform.d/plugins/registry.terraform.io/darnold/openai/70f25a4/darwin_amd64" with invalid version "70f25a4": invalid characters "f25a4"
+2025-03-08T19:24:23.289-0800 [TRACE] getproviders.SearchLocalDirectory: found registry.terraform.io/happypathway/openai v5.0.0 for darwin_amd64 at /Users/darnold/.terraform.d/plugins/registry.terraform.io/happypathway/openai/5.0.0/darwin_amd64
+2025-03-08T19:24:23.289-0800 [DEBUG] ignoring non-existing provider search directory /Users/darnold/Library/Application Support/io.terraform/plugins
+2025-03-08T19:24:23.289-0800 [DEBUG] ignoring non-existing provider search directory /Library/Application Support/io.terraform/plugins
+2025-03-08T19:24:23.292-0800 [INFO]  Checkpoint disabled. Not running.
+2025-03-08T19:24:23.294-0800 [INFO]  CLI command args: []string{"fmt", "-no-color", "-"}
+2025-03-08T19:24:23.294-0800 [TRACE] terraform fmt: Formatting <stdin>
+2025-03-08T19:24:23.294-0800 [DEBUG] Using modified User-Agent: Terraform/1.10.5 HashiCorp-terraform-exec/0.21.0
+2025-03-08T19:24:23.294-0800 [DEBUG] Using modified User-Agent: HashiCorp Terraform/1.10.5 (+https://www.terraform.io) HashiCorp-terraform-exec/0.21.0
+2025-03-08T19:25:03.754-0800 [INFO]  Terraform version: 1.10.5
+2025-03-08T19:25:03.754-0800 [DEBUG] using github.com/hashicorp/go-tfe v1.70.0
+2025-03-08T19:25:03.754-0800 [DEBUG] using github.com/hashicorp/hcl/v2 v2.23.0
+2025-03-08T19:25:03.754-0800 [DEBUG] using github.com/hashicorp/terraform-svchost v0.1.1
+2025-03-08T19:25:03.754-0800 [DEBUG] using github.com/zclconf/go-cty v1.16.2
+2025-03-08T19:25:03.754-0800 [INFO]  Go runtime version: go1.23.3
+2025-03-08T19:25:03.754-0800 [INFO]  CLI args: []string{"/usr/local/Cellar/tfenv/1.0.2/versions/1.10.5/terraform", "version", "-json"}
+2025-03-08T19:25:03.754-0800 [TRACE] Stdout is not a terminal
+2025-03-08T19:25:03.754-0800 [TRACE] Stderr is not a terminal
+2025-03-08T19:25:03.754-0800 [TRACE] Stdin is not a terminal
+2025-03-08T19:25:03.754-0800 [DEBUG] Attempting to open CLI config file: /Users/darnold/.terraformrc
+2025-03-08T19:25:03.754-0800 [INFO]  Loading CLI configuration from /Users/darnold/.terraformrc
+2025-03-08T19:25:03.754-0800 [INFO]  Loading CLI configuration from /Users/darnold/.terraform.d/credentials.tfrc.json
+2025-03-08T19:25:03.754-0800 [DEBUG] checking for credentials in "/Users/darnold/.terraform.d/plugins"
+2025-03-08T19:25:03.754-0800 [DEBUG] checking for credentials in "/Users/darnold/.terraform.d/plugins/darwin_amd64"
+2025-03-08T19:25:03.754-0800 [DEBUG] Using modified User-Agent: HashiCorp Terraform/1.10.5 (+https://www.terraform.io) HashiCorp-terraform-exec/0.21.0
+2025-03-08T19:25:03.754-0800 [DEBUG] ignoring non-existing provider search directory terraform.d/plugins
+2025-03-08T19:25:03.754-0800 [DEBUG] will search for provider plugins in /Users/darnold/.terraform.d/plugins
+2025-03-08T19:25:03.755-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:25:03.755-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0/darwin_amd64" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:25:03.755-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0/darwin_amd64/terraform-provider-openai" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:25:03.755-0800 [WARN]  Provider plugin search ignored symlink /Users/darnold/.terraform.d/plugins/darwin_amd64/terraform-provider-configstash: only the base directory /Users/darnold/.terraform.d/plugins may be a symlink
+2025-03-08T19:25:03.755-0800 [TRACE] getproviders.SearchLocalDirectory: found hashicorp.com/edu/hashicups v0.3.1 for darwin_amd64 at /Users/darnold/.terraform.d/plugins/hashicorp.com/edu/hashicups/0.3.1/darwin_amd64
+2025-03-08T19:25:03.755-0800 [WARN]  ignoring local provider path "/Users/darnold/.terraform.d/plugins/registry.terraform.io/darnold/openai/3b6fef8/darwin_amd64" with invalid version "3b6fef8": invalid characters "b6fef8"
+2025-03-08T19:25:03.755-0800 [WARN]  ignoring local provider path "/Users/darnold/.terraform.d/plugins/registry.terraform.io/darnold/openai/70f25a4/darwin_amd64" with invalid version "70f25a4": invalid characters "f25a4"
+2025-03-08T19:25:03.756-0800 [TRACE] getproviders.SearchLocalDirectory: found registry.terraform.io/happypathway/openai v5.0.0 for darwin_amd64 at /Users/darnold/.terraform.d/plugins/registry.terraform.io/happypathway/openai/5.0.0/darwin_amd64
+2025-03-08T19:25:03.756-0800 [DEBUG] ignoring non-existing provider search directory /Users/darnold/Library/Application Support/io.terraform/plugins
+2025-03-08T19:25:03.756-0800 [DEBUG] ignoring non-existing provider search directory /Library/Application Support/io.terraform/plugins
+2025-03-08T19:25:03.759-0800 [INFO]  Checkpoint disabled. Not running.
+2025-03-08T19:25:03.761-0800 [INFO]  CLI command args: []string{"version", "-json"}
+2025-03-08T19:25:03.916-0800 [INFO]  Terraform version: 1.10.5
+2025-03-08T19:25:03.916-0800 [DEBUG] using github.com/hashicorp/go-tfe v1.70.0
+2025-03-08T19:25:03.916-0800 [DEBUG] using github.com/hashicorp/hcl/v2 v2.23.0
+2025-03-08T19:25:03.916-0800 [DEBUG] using github.com/hashicorp/terraform-svchost v0.1.1
+2025-03-08T19:25:03.916-0800 [DEBUG] using github.com/zclconf/go-cty v1.16.2
+2025-03-08T19:25:03.916-0800 [INFO]  Go runtime version: go1.23.3
+2025-03-08T19:25:03.916-0800 [INFO]  CLI args: []string{"/usr/local/Cellar/tfenv/1.0.2/versions/1.10.5/terraform", "fmt", "-no-color", "-"}
+2025-03-08T19:25:03.916-0800 [TRACE] Stdout is not a terminal
+2025-03-08T19:25:03.916-0800 [TRACE] Stderr is not a terminal
+2025-03-08T19:25:03.916-0800 [TRACE] Stdin is not a terminal
+2025-03-08T19:25:03.916-0800 [DEBUG] Attempting to open CLI config file: /Users/darnold/.terraformrc
+2025-03-08T19:25:03.916-0800 [INFO]  Loading CLI configuration from /Users/darnold/.terraformrc
+2025-03-08T19:25:03.916-0800 [INFO]  Loading CLI configuration from /Users/darnold/.terraform.d/credentials.tfrc.json
+2025-03-08T19:25:03.916-0800 [DEBUG] checking for credentials in "/Users/darnold/.terraform.d/plugins"
+2025-03-08T19:25:03.916-0800 [DEBUG] checking for credentials in "/Users/darnold/.terraform.d/plugins/darwin_amd64"
+2025-03-08T19:25:03.916-0800 [DEBUG] Using modified User-Agent: HashiCorp Terraform/1.10.5 (+https://www.terraform.io) HashiCorp-terraform-exec/0.21.0
+2025-03-08T19:25:03.916-0800 [DEBUG] ignoring non-existing provider search directory terraform.d/plugins
+2025-03-08T19:25:03.916-0800 [DEBUG] will search for provider plugins in /Users/darnold/.terraform.d/plugins
+2025-03-08T19:25:03.916-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:25:03.916-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0/darwin_amd64" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:25:03.916-0800 [WARN]  local provider path "/Users/darnold/.terraform.d/plugins/HappyPathway/openai/0.1.0/darwin_amd64/terraform-provider-openai" contains invalid type "0.1.0"; ignoring
+2025-03-08T19:25:03.916-0800 [WARN]  Provider plugin search ignored symlink /Users/darnold/.terraform.d/plugins/darwin_amd64/terraform-provider-configstash: only the base directory /Users/darnold/.terraform.d/plugins may be a symlink
+2025-03-08T19:25:03.917-0800 [TRACE] getproviders.SearchLocalDirectory: found hashicorp.com/edu/hashicups v0.3.1 for darwin_amd64 at /Users/darnold/.terraform.d/plugins/hashicorp.com/edu/hashicups/0.3.1/darwin_amd64
+2025-03-08T19:25:03.917-0800 [WARN]  ignoring local provider path "/Users/darnold/.terraform.d/plugins/registry.terraform.io/darnold/openai/3b6fef8/darwin_amd64" with invalid version "3b6fef8": invalid characters "b6fef8"
+2025-03-08T19:25:03.917-0800 [WARN]  ignoring local provider path "/Users/darnold/.terraform.d/plugins/registry.terraform.io/darnold/openai/70f25a4/darwin_amd64" with invalid version "70f25a4": invalid characters "f25a4"
+2025-03-08T19:25:03.917-0800 [TRACE] getproviders.SearchLocalDirectory: found registry.terraform.io/happypathway/openai v5.0.0 for darwin_amd64 at /Users/darnold/.terraform.d/plugins/registry.terraform.io/happypathway/openai/5.0.0/darwin_amd64
+2025-03-08T19:25:03.917-0800 [DEBUG] ignoring non-existing provider search directory /Users/darnold/Library/Application Support/io.terraform/plugins
+2025-03-08T19:25:03.917-0800 [DEBUG] ignoring non-existing provider search directory /Library/Application Support/io.terraform/plugins
+2025-03-08T19:25:03.920-0800 [INFO]  Checkpoint disabled. Not running.
+2025-03-08T19:25:03.922-0800 [INFO]  CLI command args: []string{"fmt", "-no-color", "-"}
+2025-03-08T19:25:03.923-0800 [TRACE] terraform fmt: Formatting <stdin>
+2025-03-08T19:25:03.923-0800 [DEBUG] Using modified User-Agent: Terraform/1.10.5 HashiCorp-terraform-exec/0.21.0
+2025-03-08T19:25:03.923-0800 [DEBUG] Using modified User-Agent: HashiCorp Terraform/1.10.5 (+https://www.terraform.io) HashiCorp-terraform-exec/0.21.0
