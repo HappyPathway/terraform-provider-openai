@@ -251,34 +251,34 @@ func (c *Client) CreateRun(ctx context.Context, req *CreateRunRequest) (*openai.
 
 // GetRun retrieves a run by ID and thread ID
 func (c *Client) GetRun(ctx context.Context, id string, threadID string) (*openai.Run, error) {
-    run, err := c.OpenAI.RetrieveRun(ctx, threadID, id)
-    if err != nil {
-        return nil, fmt.Errorf("error retrieving run: %v", err)
-    }
-    return &run, nil
+	run, err := c.OpenAI.RetrieveRun(ctx, threadID, id)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving run: %v", err)
+	}
+	return &run, nil
 }
 
 // CancelRun cancels a run
 func (c *Client) CancelRun(ctx context.Context, id string, threadID string) error {
-    // First check the run's status
-    run, err := c.GetRun(ctx, id, threadID)
-    if err != nil {
-        if strings.Contains(err.Error(), "404") {
-            return nil // Run doesn't exist, nothing to cancel
-        }
-        return fmt.Errorf("error getting run status: %v", err)
-    }
+	// First check the run's status
+	run, err := c.GetRun(ctx, id, threadID)
+	if err != nil {
+		if strings.Contains(err.Error(), "404") {
+			return nil // Run doesn't exist, nothing to cancel
+		}
+		return fmt.Errorf("error getting run status: %v", err)
+	}
 
-    // If the run is already in a terminal state, just return
-    switch run.Status {
-    case openai.RunStatusCompleted, openai.RunStatusFailed, openai.RunStatusCancelled, openai.RunStatusExpired:
-        return nil
-    }
+	// If the run is already in a terminal state, just return
+	switch run.Status {
+	case openai.RunStatusCompleted, openai.RunStatusFailed, openai.RunStatusCancelled, openai.RunStatusExpired:
+		return nil
+	}
 
-    // Only try to cancel if the run is in a cancellable state
-    _, err = c.OpenAI.CancelRun(ctx, threadID, id)
-    if err != nil {
-        return fmt.Errorf("error cancelling run: %v", err)
-    }
-    return nil
+	// Only try to cancel if the run is in a cancellable state
+	_, err = c.OpenAI.CancelRun(ctx, threadID, id)
+	if err != nil {
+		return fmt.Errorf("error cancelling run: %v", err)
+	}
+	return nil
 }

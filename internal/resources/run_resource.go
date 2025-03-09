@@ -493,8 +493,8 @@ func (r *RunResource) Create(ctx context.Context, req resource.CreateRequest, re
 			"tool_calls": types.ListType{
 				ElemType: types.ObjectType{
 					AttrTypes: map[string]attr.Type{
-						"id":       types.StringType,
-						"type":     types.StringType,
+						"id":   types.StringType,
+						"type": types.StringType,
 						"function": types.ObjectType{
 							AttrTypes: map[string]attr.Type{
 								"name":      types.StringType,
@@ -509,14 +509,14 @@ func (r *RunResource) Create(ctx context.Context, req resource.CreateRequest, re
 	)
 	data.RequiredAction = types.ObjectValueMust(
 		map[string]attr.Type{
-			"type":               types.StringType,
+			"type": types.StringType,
 			"submit_tool_outputs": types.ObjectType{
 				AttrTypes: map[string]attr.Type{
 					"tool_calls": types.ListType{
 						ElemType: types.ObjectType{
 							AttrTypes: map[string]attr.Type{
-								"id":       types.StringType,
-								"type":     types.StringType,
+								"id":   types.StringType,
+								"type": types.StringType,
 								"function": types.ObjectType{
 									AttrTypes: map[string]attr.Type{
 										"name":      types.StringType,
@@ -692,20 +692,20 @@ func (r *RunResource) Update(ctx context.Context, req resource.UpdateRequest, re
 }
 
 func (r *RunResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-    var data RunResourceModel
-    resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
-    if resp.Diagnostics.HasError() {
-        return
-    }
+	var data RunResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-    err := r.client.CancelRun(ctx, data.ID.ValueString(), data.ThreadID.ValueString())
-    if err != nil && !strings.Contains(err.Error(), "404") {
-        resp.Diagnostics.AddError(
-            "Error Cancelling Run",
-            fmt.Sprintf("Unable to cancel run: %s", err),
-        )
-        return
-    }
+	err := r.client.CancelRun(ctx, data.ID.ValueString(), data.ThreadID.ValueString())
+	if err != nil && !strings.Contains(err.Error(), "404") {
+		resp.Diagnostics.AddError(
+			"Error Cancelling Run",
+			fmt.Sprintf("Unable to cancel run: %s", err),
+		)
+		return
+	}
 }
 
 func (r *RunResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

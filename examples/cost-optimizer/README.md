@@ -13,6 +13,7 @@ This example demonstrates how to use OpenAI's assistant API to analyze and optim
 ## Usage
 
 1. Configure your OpenAI API key:
+
    ```bash
    export OPENAI_API_KEY="your-api-key"
    ```
@@ -35,6 +36,7 @@ This example demonstrates how to use OpenAI's assistant API to analyze and optim
 ## Example Response
 
 The assistant will analyze the infrastructure and provide:
+
 - Identification of oversized resources
 - Specific cost-saving recommendations
 - Reserved instance/savings plan opportunities

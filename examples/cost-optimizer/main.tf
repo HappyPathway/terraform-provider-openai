@@ -46,7 +46,7 @@ resource "openai_message" "analyze_costs" {
   metadata = {
     resource_count = "25"
     cloud_provider = "aws"
-    region        = "us-west-2"
+    region         = "us-west-2"
   }
 }
 
