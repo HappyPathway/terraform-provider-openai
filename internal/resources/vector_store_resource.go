@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/sashabaranov/go-openai"
 )
@@ -30,17 +31,17 @@ type VectorStoreResource struct {
 
 // VectorStoreResourceModel describes the resource data model.
 type VectorStoreResourceModel struct {
-	ID           types.String `tfsdk:"id"`
-	Name         types.String `tfsdk:"name"`
-	CreatedAt    types.Int64  `tfsdk:"created_at"`
-	Status       types.String `tfsdk:"status"`
-	UsageBytes   types.Int64  `tfsdk:"usage_bytes"`
-	ExpiresAt    types.Int64  `tfsdk:"expires_at"`
+	ID           types.String      `tfsdk:"id"`
+	Name         types.String      `tfsdk:"name"`
+	CreatedAt    types.Int64       `tfsdk:"created_at"`
+	Status       types.String      `tfsdk:"status"`
+	UsageBytes   types.Int64       `tfsdk:"usage_bytes"`
+	ExpiresAt    types.Int64       `tfsdk:"expires_at"`
 	ExpiresAfter *struct {
 		Days   types.Int64  `tfsdk:"days"`
 		Anchor types.String `tfsdk:"anchor"`
 	} `tfsdk:"expires_after"`
-	Metadata map[string]string `tfsdk:"metadata"`
+	Metadata basetypes.MapValue `tfsdk:"metadata"`
 }
 
 func (r *VectorStoreResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -50,24 +51,6 @@ func (r *VectorStoreResource) Metadata(_ context.Context, req resource.MetadataR
 func (r *VectorStoreResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages an OpenAI vector store for efficient embedding storage and retrieval.",
-
-		Blocks: map[string]schema.Block{
-			"expires_after": schema.SingleNestedBlock{
-				MarkdownDescription: "Configuration for vector store expiration.",
-				Blocks:              map[string]schema.Block{},
-				Attributes: map[string]schema.Attribute{
-					"days": schema.Int64Attribute{
-						MarkdownDescription: "Number of days after which the vector store expires.",
-						Required:            true,
-					},
-					"anchor": schema.StringAttribute{
-						MarkdownDescription: "Reference time for expiration calculation.",
-						Optional:            true,
-					},
-				},
-			},
-		},
-
 		Attributes: map[string]schema.Attribute{
 			"metadata": schema.MapAttribute{
 				ElementType:         types.StringType,
@@ -84,6 +67,20 @@ func (r *VectorStoreResource) Schema(_ context.Context, _ resource.SchemaRequest
 			"name": schema.StringAttribute{
 				MarkdownDescription: "The name of the vector store.",
 				Required:            true,
+			},
+			"expires_after": schema.SingleNestedAttribute{
+				MarkdownDescription: "Configuration for vector store expiration.",
+				Required:           true,
+				Attributes: map[string]schema.Attribute{
+					"days": schema.Int64Attribute{
+						MarkdownDescription: "Number of days after which the vector store expires.",
+						Required:            true,
+					},
+					"anchor": schema.StringAttribute{
+						MarkdownDescription: "Reference time for expiration calculation.",
+						Optional:            true,
+					},
+				},
 			},
 			"created_at": schema.Int64Attribute{
 				MarkdownDescription: "The timestamp when the vector store was created.",
@@ -132,7 +129,7 @@ func (r *VectorStoreResource) Create(ctx context.Context, req resource.CreateReq
 
 	// Convert metadata to map[string]interface{}
 	metadata := make(map[string]interface{})
-	for k, v := range plan.Metadata {
+	for k, v := range plan.Metadata.Elements() {
 		metadata[k] = v
 	}
 
@@ -218,7 +215,7 @@ func (r *VectorStoreResource) Update(ctx context.Context, req resource.UpdateReq
 
 	// Convert metadata to map[string]interface{}
 	metadata := make(map[string]interface{})
-	for k, v := range plan.Metadata {
+	for k, v := range plan.Metadata.Elements() {
 		metadata[k] = v
 	}
 

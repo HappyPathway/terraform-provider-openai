@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/sashabaranov/go-openai"
 )
@@ -32,12 +33,13 @@ type VectorStoreFileResource struct {
 
 // VectorStoreFileResourceModel describes the resource data model.
 type VectorStoreFileResourceModel struct {
-	ID            types.String `tfsdk:"id"`
-	VectorStoreID types.String `tfsdk:"vector_store_id"`
-	FileID        types.String `tfsdk:"file_id"`
-	CreatedAt     types.Int64  `tfsdk:"created_at"`
-	UsageBytes    types.Int64  `tfsdk:"usage_bytes"`
-	Status        types.String `tfsdk:"status"`
+	ID            types.String       `tfsdk:"id"`
+	VectorStoreID types.String       `tfsdk:"vector_store_id"`
+	FileID        types.String       `tfsdk:"file_id"`
+	CreatedAt     types.Int64        `tfsdk:"created_at"`
+	UsageBytes    types.Int64        `tfsdk:"usage_bytes"`
+	Status        types.String       `tfsdk:"status"`
+	Metadata      basetypes.MapValue `tfsdk:"metadata"`
 }
 
 func (r *VectorStoreFileResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -72,6 +74,11 @@ func (r *VectorStoreFileResource) Schema(_ context.Context, _ resource.SchemaReq
 				Validators: []validator.String{
 					fileTypeValidator{},
 				},
+			},
+			"metadata": schema.MapAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				MarkdownDescription: "Metadata key-value pairs for the file.",
 			},
 			"created_at": schema.Int64Attribute{
 				MarkdownDescription: "The timestamp when the file was added to the vector store.",

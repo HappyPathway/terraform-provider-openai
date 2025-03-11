@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/sashabaranov/go-openai"
 )
@@ -39,7 +40,7 @@ type AssistantResourceModel struct {
 	Instructions  types.String                 `tfsdk:"instructions"`
 	Tools         types.List                   `tfsdk:"tools"`
 	ToolResources *AssistantToolResourcesModel `tfsdk:"tool_resources"`
-	Metadata      types.Map                    `tfsdk:"metadata"`
+	Metadata      basetypes.MapValue           `tfsdk:"metadata"`
 	CreatedAt     types.Int64                  `tfsdk:"created_at"`
 }
 
@@ -121,10 +122,21 @@ func (r *AssistantResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				MarkdownDescription: "The system instructions that the assistant uses for tasks.",
 				Optional:            true,
 			},
-			"tools": schema.ListAttribute{
-				MarkdownDescription: "A list of tools enabled for the assistant. Valid values are: code_interpreter, file_search, and function.",
+			"tools": schema.ListNestedAttribute{
+				MarkdownDescription: "A list of tools enabled for the assistant.",
 				Optional:            true,
-				ElementType:         types.StringType,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"type": schema.StringAttribute{
+							MarkdownDescription: "The type of tool. Valid values are: code_interpreter, file_search, and function.",
+							Required:            true,
+						},
+						"function": schema.StringAttribute{
+							MarkdownDescription: "For function tools, the function definition as a JSON string.",
+							Optional:            true,
+						},
+					},
+				},
 			},
 			"metadata": schema.MapAttribute{
 				ElementType:         types.StringType,

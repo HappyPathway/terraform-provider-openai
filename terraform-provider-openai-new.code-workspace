@@ -12,30 +12,6 @@
       "path": "."
     },
     {
-      "name": "docs/provider/aws/data-sources",
-      "path": "../docs/terraform-provider-aws/website/docs/d"
-    },
-    {
-      "name": "docs/provider/aws/resources",
-      "path": "../docs/terraform-provider-aws/website/docs/r"
-    },
-    {
-      "name": "docs/provider/google/data-sources",
-      "path": "../docs/terraform-provider-google/website/docs/d"
-    },
-    {
-      "name": "docs/provider/google/resources",
-      "path": "../docs/terraform-provider-google/website/docs/r"
-    },
-    {
-      "name": "docs/provider/github",
-      "path": "../providers/terraform-provider-github"
-    },
-    {
-      "name": "docs/provider/openai",
-      "path": "../docs/go-openai"
-    },
-    {
       "name": "docs/provider/framework",
       "path": "../docs/terraform-plugin-framework"
     },

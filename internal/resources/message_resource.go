@@ -33,16 +33,16 @@ type MessageResource struct {
 
 // MessageResourceModel describes the resource data model.
 type MessageResourceModel struct {
-	ID          types.String      `tfsdk:"id"`
-	Object      types.String      `tfsdk:"object"`
-	ThreadID    types.String      `tfsdk:"thread_id"`
-	Role        types.String      `tfsdk:"role"`
-	Content     types.String      `tfsdk:"content"`
-	FileIDs     []string          `tfsdk:"file_ids"`
-	Metadata    map[string]string `tfsdk:"metadata"`
-	AssistantID types.String      `tfsdk:"assistant_id"`
-	RunID       types.String      `tfsdk:"run_id"`
-	CreatedAt   types.Int64       `tfsdk:"created_at"`
+	ID          types.String `tfsdk:"id"`
+	Object      types.String `tfsdk:"object"`
+	ThreadID    types.String `tfsdk:"thread_id"`
+	Role        types.String `tfsdk:"role"`
+	Content     types.String `tfsdk:"content"`
+	FileIDs     []string     `tfsdk:"file_ids"`
+	Metadata    types.Map    `tfsdk:"metadata"`
+	AssistantID types.String `tfsdk:"assistant_id"`
+	RunID       types.String `tfsdk:"run_id"`
+	CreatedAt   types.Int64  `tfsdk:"created_at"`
 }
 
 func (r *MessageResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -152,13 +152,14 @@ func (r *MessageResource) Create(ctx context.Context, req resource.CreateRequest
 		messageReq.FileIds = plan.FileIDs
 	}
 
-	if len(plan.Metadata) > 0 {
-		// Convert from map[string]string to map[string]interface{}
-		metadataAny := make(map[string]interface{})
-		for k, v := range plan.Metadata {
-			metadataAny[k] = v
+	if !plan.Metadata.IsNull() {
+		metadata := make(map[string]string)
+		diags := plan.Metadata.ElementsAs(ctx, &metadata, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
 		}
-		messageReq.Metadata = metadataAny
+		messageReq.Metadata = convertToMapStringAny(metadata)
 	}
 
 	// Create the message
@@ -291,9 +292,14 @@ func (r *MessageResource) Read(ctx context.Context, req resource.ReadRequest, re
 				metadataStr[k] = fmt.Sprintf("%v", v)
 			}
 		}
-		state.Metadata = metadataStr
+		metadataValue, diags := types.MapValueFrom(ctx, types.StringType, metadataStr)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		state.Metadata = metadataValue
 	} else {
-		state.Metadata = nil
+		state.Metadata = types.MapNull(types.StringType)
 	}
 
 	// Save state
@@ -327,10 +333,16 @@ func (r *MessageResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	// The v2 API only allows updating metadata
-	if !equalMetadata(plan.Metadata, state.Metadata) {
-		// Convert metadata to the format expected by ModifyMessage
-		metadata := plan.Metadata
-		if metadata == nil {
+	if !plan.Metadata.Equal(state.Metadata) {
+		// Convert metadata to map[string]string
+		var metadata map[string]string
+		if !plan.Metadata.IsNull() {
+			diags := plan.Metadata.ElementsAs(ctx, &metadata, false)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+		} else {
 			metadata = make(map[string]string)
 		}
 

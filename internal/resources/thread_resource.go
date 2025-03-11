@@ -66,7 +66,6 @@ type ThreadToolResourcesFileSearchModel struct {
 func (r *ThreadResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Creates and manages OpenAI Threads, which are conversation contexts that collect and organize messages between users and assistants.",
-
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -78,6 +77,7 @@ func (r *ThreadResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			"metadata": schema.MapAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
+				Computed:           true,
 				MarkdownDescription: "A map of key-value pairs that can be used to store additional information about the thread.",
 			},
 			"created_at": schema.Int64Attribute{
@@ -92,14 +92,14 @@ func (r *ThreadResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				ElementType:         types.StringType,
 				Optional:            true,
 				MarkdownDescription: "A list of tools enabled for this thread. Valid values are: code_interpreter and file_search.",
-			},
-		},
-		Blocks: map[string]schema.Block{
-			"tool_resources": schema.SingleNestedBlock{
+				},
+			"tool_resources": schema.SingleNestedAttribute{
 				MarkdownDescription: "Resources made available to the thread's tools.",
-				Blocks: map[string]schema.Block{
-					"code_interpreter": schema.SingleNestedBlock{
+				Optional:           true,
+				Attributes: map[string]schema.Attribute{
+					"code_interpreter": schema.SingleNestedAttribute{
 						MarkdownDescription: "Resources for the code interpreter tool.",
+						Optional:           true,
 						Attributes: map[string]schema.Attribute{
 							"file_ids": schema.SetAttribute{
 								MarkdownDescription: "File IDs that the code interpreter can use.",
@@ -108,8 +108,9 @@ func (r *ThreadResource) Schema(ctx context.Context, req resource.SchemaRequest,
 							},
 						},
 					},
-					"file_search": schema.SingleNestedBlock{
+					"file_search": schema.SingleNestedAttribute{
 						MarkdownDescription: "Resources for the file search tool.",
+						Optional:           true,
 						Attributes: map[string]schema.Attribute{
 							"vector_store_ids": schema.SetAttribute{
 								MarkdownDescription: "Vector store IDs available to the file search tool.",
@@ -120,9 +121,10 @@ func (r *ThreadResource) Schema(ctx context.Context, req resource.SchemaRequest,
 					},
 				},
 			},
-			"messages": schema.ListNestedBlock{
+			"messages": schema.ListNestedAttribute{
 				MarkdownDescription: "Initial messages for the thread.",
-				NestedObject: schema.NestedBlockObject{
+				Optional:           true,
+				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"role": schema.StringAttribute{
 							MarkdownDescription: "The role of the entity creating the message. Must be either \"user\" or \"assistant\".",
@@ -141,6 +143,7 @@ func (r *ThreadResource) Schema(ctx context.Context, req resource.SchemaRequest,
 						"metadata": schema.MapAttribute{
 							ElementType:         types.StringType,
 							Optional:            true,
+                            Computed:           true,
 							MarkdownDescription: "A map of key-value pairs that can be used to store additional information about the message.",
 						},
 					},

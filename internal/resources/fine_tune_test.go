@@ -3,21 +3,22 @@ package resources_test
 import (
 	"testing"
 
-	"github.com/darnold/terraform-provider-openai/internal/provider"
+	"github.com/darnold/terraform-provider-openai/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 func TestAccFineTuneResource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { provider.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccFineTuneResourceConfig_basic(),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("openai_fine_tune.test", "model", "davinci"),
 					resource.TestCheckResourceAttrSet("openai_fine_tune.test", "id"),
-					resource.TestCheckResourceAttr("openai_fine_tune.test", "model", "gpt-3.5-turbo"),
-					resource.TestCheckResourceAttrSet("openai_fine_tune.test", "status"),
 					resource.TestCheckResourceAttrSet("openai_fine_tune.test", "created_at"),
+					resource.TestCheckResourceAttr("openai_fine_tune.test", "training_file_id", "file-abc123"),
 				),
 			},
 		},
@@ -26,14 +27,15 @@ func TestAccFineTuneResource(t *testing.T) {
 
 func TestAccFineTuneResource_withHyperparameters(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { provider.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctest.PreCheck(t) },
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccFineTuneResourceConfig_withHyperparameters(),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("openai_fine_tune.test", "model", "gpt-3.5-turbo"),
-					resource.TestCheckResourceAttr("openai_fine_tune.test", "hyperparameters.n_epochs", "3"),
-					resource.TestCheckResourceAttrSet("openai_fine_tune.test", "status"),
+					resource.TestCheckResourceAttr("openai_fine_tune.test", "model", "davinci"),
+					resource.TestCheckResourceAttr("openai_fine_tune.test", "hyperparameters.n_epochs", "4"),
+					resource.TestCheckResourceAttr("openai_fine_tune.test", "hyperparameters.batch_size", "32"),
 				),
 			},
 		},
@@ -42,40 +44,21 @@ func TestAccFineTuneResource_withHyperparameters(t *testing.T) {
 
 func testAccFineTuneResourceConfig_basic() string {
 	return `
-resource "openai_file" "test" {
-  filename = "test.jsonl"
-  content  = jsonencode([
-    {"prompt": "Company: ACME Corp, Revenue: ", "completion": " $1M"},
-    {"prompt": "Company: XYZ Inc, Revenue: ", "completion": " $2M"}
-  ])
-  purpose = "fine-tune"
-}
-
 resource "openai_fine_tune" "test" {
-  training_file = openai_file.test.id
-  model        = "gpt-3.5-turbo"
-  suffix       = "test-model"
+  training_file_id = "file-abc123"
+  model           = "davinci"
 }
 `
 }
 
 func testAccFineTuneResourceConfig_withHyperparameters() string {
 	return `
-resource "openai_file" "test" {
-  filename = "test.jsonl"
-  content  = jsonencode([
-    {"prompt": "Company: ACME Corp, Revenue: ", "completion": " $1M"},
-    {"prompt": "Company: XYZ Inc, Revenue: ", "completion": " $2M"}
-  ])
-  purpose = "fine-tune"
-}
-
 resource "openai_fine_tune" "test" {
-  training_file = openai_file.test.id
-  model        = "gpt-3.5-turbo"
-  suffix       = "test-model-params"
+  training_file_id = "file-abc123"
+  model          = "davinci"
   hyperparameters = {
-    n_epochs = 3
+    n_epochs   = 4
+    batch_size = 32
   }
 }
 `
