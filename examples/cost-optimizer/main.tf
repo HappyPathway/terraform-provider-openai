@@ -41,7 +41,7 @@ resource "openai_thread" "cost_analysis" {
 resource "openai_message" "analyze_costs" {
   thread_id = openai_thread.cost_analysis.id
   role      = "user"
-  content   = var.infrastructure_code
+  content   = file("${path.module}/main.tf")
 
   metadata = {
     resource_count = "25"

@@ -93,33 +93,29 @@ func (r *ThreadResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				Optional:            true,
 				MarkdownDescription: "A list of tools enabled for this thread. Valid values are: code_interpreter and file_search.",
 			},
-		},
-		Blocks: map[string]schema.Block{
-			"tool_resources": schema.SingleNestedBlock{
+			"tool_resources": schema.ObjectAttribute{
 				MarkdownDescription: "Resources made available to the thread's tools.",
-				Blocks: map[string]schema.Block{
-					"code_interpreter": schema.SingleNestedBlock{
-						MarkdownDescription: "Resources for the code interpreter tool.",
-						Attributes: map[string]schema.Attribute{
-							"file_ids": schema.SetAttribute{
-								MarkdownDescription: "File IDs that the code interpreter can use.",
-								ElementType:         types.StringType,
-								Optional:            true,
+				Optional:            true,
+				Computed:            true,
+				AttributeTypes: map[string]attr.Type{
+					"code_interpreter": types.ObjectType{
+						AttrTypes: map[string]attr.Type{
+							"file_ids": types.SetType{
+								ElemType: types.StringType,
 							},
 						},
 					},
-					"file_search": schema.SingleNestedBlock{
-						MarkdownDescription: "Resources for the file search tool.",
-						Attributes: map[string]schema.Attribute{
-							"vector_store_ids": schema.SetAttribute{
-								MarkdownDescription: "Vector store IDs available to the file search tool.",
-								ElementType:         types.StringType,
-								Optional:            true,
+					"file_search": types.ObjectType{
+						AttrTypes: map[string]attr.Type{
+							"vector_store_ids": types.SetType{
+								ElemType: types.StringType,
+							},
 							},
 						},
 					},
 				},
 			},
+		Blocks: map[string]schema.Block{
 			"messages": schema.ListNestedBlock{
 				MarkdownDescription: "Initial messages for the thread.",
 				NestedObject: schema.NestedBlockObject{
@@ -221,7 +217,7 @@ func (r *ThreadResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	// Update the state
+	// Update the plan with values from the response
 	plan.ID = types.StringValue(thread.ID)
 	plan.CreatedAt = types.Int64Value(int64(thread.CreatedAt))
 	plan.Object = types.StringValue(thread.Object)
@@ -243,14 +239,12 @@ func (r *ThreadResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	// Handle tool_resources in response
-	if thread.ToolResources != (openai.ToolResources{}) {
-		toolResourcesState, diags := convertOpenAIToolResourcesToState(ctx, thread.ToolResources)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		plan.ToolResources = toolResourcesState
+	toolResourcesState, diags := convertOpenAIToolResourcesToState(ctx, thread.ToolResources)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
+	plan.ToolResources = toolResourcesState
 
 	// Save into state
 	diags = resp.State.Set(ctx, plan)
@@ -375,7 +369,10 @@ func (r *ThreadResource) Update(ctx context.Context, req resource.UpdateRequest,
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		threadReq.ToolResources = &toolResources
+		// Only include tool_resources if we have actual values
+		if toolResources != (openai.ToolResources{}) {
+			threadReq.ToolResources = &toolResources
+		}
 	}
 
 	tflog.Debug(ctx, "Updating thread", map[string]interface{}{
@@ -413,14 +410,12 @@ func (r *ThreadResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// Handle tool_resources in response
-	if thread.ToolResources != (openai.ToolResources{}) {
-		toolResourcesState, diags := convertOpenAIToolResourcesToState(ctx, thread.ToolResources)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		plan.ToolResources = toolResourcesState
+	toolResourcesState, diags := convertOpenAIToolResourcesToState(ctx, thread.ToolResources)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
+	plan.ToolResources = toolResourcesState
 
 	// Save into state
 	diags = resp.State.Set(ctx, plan)
@@ -476,7 +471,9 @@ func convertTerraformToolResourcesToOpenAI(ctx context.Context, toolResources ty
 		return result, diags
 	}
 
-	// Handle code_interpreter
+	hasResources := false
+
+	// Handle code_interpreter if present
 	if codeInterpreter, ok := val["code_interpreter"].(types.Object); ok && !codeInterpreter.IsNull() {
 		attrs := codeInterpreter.Attributes()
 		if fileIDs, ok := attrs["file_ids"].(types.Set); ok && !fileIDs.IsNull() {
@@ -485,15 +482,18 @@ func convertTerraformToolResourcesToOpenAI(ctx context.Context, toolResources ty
 			if diags.HasError() {
 				return result, diags
 			}
-			// Sort the file IDs for consistency
-			sort.Strings(ids)
-			result.CodeInterpreter = &openai.CodeInterpreterToolResources{
-				FileIDs: ids,
+			if len(ids) > 0 {
+				// Sort the file IDs for consistency
+				sort.Strings(ids)
+				result.CodeInterpreter = &openai.CodeInterpreterToolResources{
+					FileIDs: ids,
+				}
+				hasResources = true
 			}
 		}
 	}
 
-	// Handle file_search
+	// Handle file_search if present
 	if fileSearch, ok := val["file_search"].(types.Object); ok && !fileSearch.IsNull() {
 		attrs := fileSearch.Attributes()
 		if vectorStoreIDs, ok := attrs["vector_store_ids"].(types.Set); ok && !vectorStoreIDs.IsNull() {
@@ -502,12 +502,20 @@ func convertTerraformToolResourcesToOpenAI(ctx context.Context, toolResources ty
 			if diags.HasError() {
 				return result, diags
 			}
-			// Sort the vector store IDs for consistency
-			sort.Strings(ids)
-			result.FileSearch = &openai.FileSearchToolResources{
-				VectorStoreIDs: ids,
+			if len(ids) > 0 {
+				// Sort the vector store IDs for consistency
+				sort.Strings(ids)
+				result.FileSearch = &openai.FileSearchToolResources{
+					VectorStoreIDs: ids,
+				}
+				hasResources = true
 			}
 		}
+	}
+
+	// If no resources were configured with actual values, return empty result
+	if !hasResources {
+		return openai.ToolResources{}, diags
 	}
 
 	return result, diags
@@ -535,8 +543,9 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 		},
 	}
 
-	// If no tool resources were present in the API response, return null
-	if toolResources == (openai.ToolResources{}) {
+	// If both tool resources are empty, return null
+	if (toolResources.CodeInterpreter == nil || len(toolResources.CodeInterpreter.FileIDs) == 0) &&
+		(toolResources.FileSearch == nil || len(toolResources.FileSearch.VectorStoreIDs) == 0) {
 		return types.ObjectNull(attrTypes), diags
 	}
 
@@ -555,18 +564,16 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 	}
 
 	// Update code_interpreter if present in response
-	if toolResources.CodeInterpreter != nil {
+	if toolResources.CodeInterpreter != nil && len(toolResources.CodeInterpreter.FileIDs) > 0 {
 		// Sort file IDs for consistency
 		sortedFileIDs := make([]string, len(toolResources.CodeInterpreter.FileIDs))
 		copy(sortedFileIDs, toolResources.CodeInterpreter.FileIDs)
 		sort.Strings(sortedFileIDs)
-
 		fileIDsVal, d := types.SetValueFrom(ctx, types.StringType, sortedFileIDs)
 		diags.Append(d...)
 		if diags.HasError() {
 			return types.ObjectNull(attrTypes), diags
 		}
-
 		attrs["code_interpreter"], d = types.ObjectValue(
 			map[string]attr.Type{
 				"file_ids": types.SetType{
@@ -584,18 +591,16 @@ func convertOpenAIToolResourcesToState(ctx context.Context, toolResources openai
 	}
 
 	// Update file_search if present in response
-	if toolResources.FileSearch != nil {
+	if toolResources.FileSearch != nil && len(toolResources.FileSearch.VectorStoreIDs) > 0 {
 		// Sort vector store IDs for consistency
 		sortedVectorStoreIDs := make([]string, len(toolResources.FileSearch.VectorStoreIDs))
 		copy(sortedVectorStoreIDs, toolResources.FileSearch.VectorStoreIDs)
 		sort.Strings(sortedVectorStoreIDs)
-
 		vectorStoreIDsVal, d := types.SetValueFrom(ctx, types.StringType, sortedVectorStoreIDs)
 		diags.Append(d...)
 		if diags.HasError() {
 			return types.ObjectNull(attrTypes), diags
 		}
-
 		attrs["file_search"], d = types.ObjectValue(
 			map[string]attr.Type{
 				"vector_store_ids": types.SetType{
@@ -631,6 +636,7 @@ func convertTerraformToolResourcesToOpenAIRequest(ctx context.Context, toolResou
 	}
 
 	result := &openai.ToolResourcesRequest{}
+	hasResources := false
 
 	// Handle code_interpreter if present
 	if codeInterpreterVal, ok := val["code_interpreter"]; ok {
@@ -643,8 +649,11 @@ func convertTerraformToolResourcesToOpenAIRequest(ctx context.Context, toolResou
 					if diags.HasError() {
 						return nil, diags
 					}
-					result.CodeInterpreter = &openai.CodeInterpreterToolResourcesRequest{
-						FileIDs: ids,
+					if len(ids) > 0 {
+						result.CodeInterpreter = &openai.CodeInterpreterToolResourcesRequest{
+							FileIDs: ids,
+						}
+						hasResources = true
 					}
 				}
 			}
@@ -662,16 +671,19 @@ func convertTerraformToolResourcesToOpenAIRequest(ctx context.Context, toolResou
 					if diags.HasError() {
 						return nil, diags
 					}
-					result.FileSearch = &openai.FileSearchToolResourcesRequest{
-						VectorStoreIDs: ids,
+					if len(ids) > 0 {
+						result.FileSearch = &openai.FileSearchToolResourcesRequest{
+							VectorStoreIDs: ids,
+						}
+						hasResources = true
 					}
 				}
 			}
 		}
 	}
 
-	// If no tools were configured, return nil
-	if result.CodeInterpreter == nil && result.FileSearch == nil {
+	// If no resources were configured with actual values, return nil
+	if !hasResources {
 		return nil, diags
 	}
 

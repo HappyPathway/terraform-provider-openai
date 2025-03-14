@@ -4,6 +4,6 @@
 provider "registry.terraform.io/happypathway/openai" {
   version = "5.0.0"
   hashes = [
-    "h1:FPszhpdGWX/D4qV8crdKEMp0Kor/RtpSz1RBXOhW73M=",
+    "h1:i5T4znjsVpLy/PGMg4QDHLmYTOEggINomOHGuIPfgH8=",
   ]
 }

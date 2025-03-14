@@ -46,21 +46,6 @@ resource "openai_assistant" "infra_docs" {
 
   tools = ["code_interpreter", "file_search"]
 
-  # In v2, files are attached through tool_resources
-  tool_resources {
-    code_interpreter {
-      # Files that can be used by the code interpreter
-      file_ids = [openai_file.terraform_docs.id]
-    }
-    file_search {
-      # Files available for semantic search
-      vector_store_ids = [
-        openai_file.terraform_docs.id,
-        openai_file.architecture_docs.id
-      ]
-    }
-  }
-
   metadata = {
     department    = "Infrastructure"
     purpose       = "Documentation Management"
@@ -91,9 +76,22 @@ resource "openai_message" "init_docs" {
     4. Identify any security or compliance gaps in documentation
   EOT
 
-  # Attach both documentation files to this message
-  # This will automatically add them to the thread's tool_resources
+  attachment = [
+    {
+      file_id = openai_file.terraform_docs.id
+      tools   = ["file_search"]
+    },
+    {
+      file_id = openai_file.architecture_docs.id
+      tools   = ["file_search"]
+    }
+  ]
+
   assistant_id = openai_assistant.infra_docs.id
+  metadata = {
+    type = "initial-analysis"
+    task = "documentation-review"
+  }
 }
 
 # Output the assistant's analysis

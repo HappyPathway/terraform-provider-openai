@@ -38,11 +38,17 @@ type MessageResourceModel struct {
 	ThreadID    types.String      `tfsdk:"thread_id"`
 	Role        types.String      `tfsdk:"role"`
 	Content     types.String      `tfsdk:"content"`
-	FileIDs     []string          `tfsdk:"file_ids"`
+	Attachments []AttachmentModel `tfsdk:"attachment"`
 	Metadata    map[string]string `tfsdk:"metadata"`
 	AssistantID types.String      `tfsdk:"assistant_id"`
 	RunID       types.String      `tfsdk:"run_id"`
 	CreatedAt   types.Int64       `tfsdk:"created_at"`
+}
+
+// AttachmentModel describes an attachment for a message
+type AttachmentModel struct {
+	FileID types.String   `tfsdk:"file_id"`
+	Tools  []types.String `tfsdk:"tools"`
 }
 
 func (r *MessageResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -80,10 +86,23 @@ func (r *MessageResource) Schema(ctx context.Context, req resource.SchemaRequest
 				MarkdownDescription: "The content of the message.",
 				Required:            true,
 			},
-			"file_ids": schema.ListAttribute{
-				ElementType:         types.StringType,
-				MarkdownDescription: "A list of File IDs that the message should use.",
+			"attachment": schema.ListNestedAttribute{
+				MarkdownDescription: "A list of attachments for the message.",
 				Optional:            true,
+				Computed:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"file_id": schema.StringAttribute{
+							MarkdownDescription: "The ID of the file to attach.",
+							Required:            true,
+						},
+						"tools": schema.ListAttribute{
+							ElementType:         types.StringType,
+							MarkdownDescription: "A list of tools associated with the attachment.",
+							Optional:            true,
+						},
+					},
+				},
 			},
 			"metadata": schema.MapAttribute{
 				ElementType:         types.StringType,
@@ -148,8 +167,27 @@ func (r *MessageResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Add optional fields if specified
-	if len(plan.FileIDs) > 0 {
-		messageReq.FileIds = plan.FileIDs
+	if len(plan.Attachments) > 0 {
+		attachments := []openai.ThreadAttachment{}
+		for _, attachment := range plan.Attachments {
+			fileAttachment := openai.ThreadAttachment{
+				FileID: attachment.FileID.ValueString(),
+			}
+
+			// Convert tools from Terraform types to string slice
+			if len(attachment.Tools) > 0 {
+				tools := make([]openai.ThreadAttachmentTool, len(attachment.Tools))
+				for i, tool := range attachment.Tools {
+					tools[i] = openai.ThreadAttachmentTool{
+						Type: tool.ValueString(),
+					}
+				}
+				fileAttachment.Tools = tools
+			}
+
+			attachments = append(attachments, fileAttachment)
+		}
+		messageReq.Attachments = attachments
 	}
 
 	if len(plan.Metadata) > 0 {
@@ -177,11 +215,18 @@ func (r *MessageResource) Create(ctx context.Context, req resource.CreateRequest
 	plan.CreatedAt = types.Int64Value(int64(message.CreatedAt))
 	plan.Role = types.StringValue(message.Role)
 
-	// Handle file IDs in response
+	// Get file IDs from the message response
 	if len(message.FileIds) > 0 {
-		plan.FileIDs = message.FileIds
+		attachments := []AttachmentModel{}
+		for _, fileID := range message.FileIds {
+			attachments = append(attachments, AttachmentModel{
+				FileID: types.StringValue(fileID),
+				Tools:  []types.String{},
+			})
+		}
+		plan.Attachments = attachments
 	} else {
-		plan.FileIDs = nil
+		plan.Attachments = nil
 	}
 
 	// Ensure content is properly set from response
@@ -260,11 +305,18 @@ func (r *MessageResource) Read(ctx context.Context, req resource.ReadRequest, re
 		state.Content = types.StringValue(message.Content[0].Text.Value)
 	}
 
-	// Convert file IDs
+	// Convert file IDs to attachments
 	if len(message.FileIds) > 0 {
-		state.FileIDs = message.FileIds
+		attachments := []AttachmentModel{}
+		for _, fileID := range message.FileIds {
+			attachments = append(attachments, AttachmentModel{
+				FileID: types.StringValue(fileID),
+				Tools:  []types.String{},
+			})
+		}
+		state.Attachments = attachments
 	} else {
-		state.FileIDs = nil
+		state.Attachments = nil
 	}
 
 	// Handle optional fields with proper initialization
@@ -363,10 +415,10 @@ func (r *MessageResource) Update(ctx context.Context, req resource.UpdateRequest
 		// If non-metadata fields changed, return an error as they cannot be modified
 		if !plan.Content.Equal(state.Content) ||
 			!plan.Role.Equal(state.Role) ||
-			!equalStringSlice(plan.FileIDs, state.FileIDs) {
+			!equalAttachmentSlice(plan.Attachments, state.Attachments) {
 			resp.Diagnostics.AddError(
 				"Cannot Update Message Fields",
-				"Message content, role, and file IDs cannot be modified after creation. Only metadata can be updated.",
+				"Message content, role, and attachments cannot be modified after creation. Only metadata can be updated.",
 			)
 			return
 		}
@@ -450,6 +502,30 @@ func equalMetadata(a, b map[string]string) bool {
 	}
 	for k, v := range a {
 		if b[k] != v {
+			return false
+		}
+	}
+	return true
+}
+
+func equalAttachmentSlice(a, b []AttachmentModel) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].FileID != b[i].FileID || !equalStringTypeSlice(a[i].Tools, b[i].Tools) {
+			return false
+		}
+	}
+	return true
+}
+
+func equalStringTypeSlice(a, b []types.String) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].ValueString() != b[i].ValueString() {
 			return false
 		}
 	}

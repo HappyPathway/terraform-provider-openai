@@ -1,3 +1,22 @@
+terraform {
+  required_providers {
+    openai = {
+      source = "HappyPathway/openai"
+    }
+  }
+}
+
+provider "openai" {
+  # Configure the OpenAI Provider
+}
+
+# Upload a file for use with the OpenAI API
+resource "openai_file" "data_file" {
+  filename = "data.json"
+  content  = jsonencode({ "example" : "data" })
+  purpose  = "assistants"
+}
+
 # Create a thread for analysis
 resource "openai_thread" "analysis_session" {
   metadata = {
@@ -6,6 +25,9 @@ resource "openai_thread" "analysis_session" {
   }
 
   tool_resources = {
+    code_interpreter = {
+      file_ids = []
+    }
     file_search = {
       vector_store_ids = [] # Empty list of strings
     }
@@ -26,8 +48,10 @@ resource "openai_message" "initial_message" {
   role      = "user"
   content   = "Please analyze the data in data.json using the provided analysis.py script."
 
-  attachment {
-    file_id = openai_file.data_file.id
-    tools   = ["code_interpreter"]
-  }
+  attachment = [
+    {
+      file_id = openai_file.data_file.id
+      tools   = ["code_interpreter"]
+    }
+  ]
 }
