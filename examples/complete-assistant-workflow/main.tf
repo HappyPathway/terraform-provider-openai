@@ -73,13 +73,10 @@ resource "openai_assistant" "data_analyst" {
   model        = "gpt-4-turbo-preview"
   description  = "An assistant that helps analyze data using code interpreter and file search"
   instructions = "You are a data analysis assistant. Use the provided files and code interpreter to help analyze data and answer questions."
+  tools        = ["code_interpreter"]
 
-  tools = ["code_interpreter"]
-
-  # Tool resources block is optional
-  tool_resources {
-    # Code interpreter block is optional
-    code_interpreter {
+  tool_resources = {
+    code_interpreter = {
       file_ids = toset([
         openai_file.data_file.id,
         openai_file.secondary_data_file.id,
@@ -106,13 +103,12 @@ resource "openai_thread" "analysis_session" {
     session_type = "data_analysis"
     project      = "example"
   }
-
-  # Configure the thread to use the vector store for semantic search
-  tool_resources {
-    file_search {
+  
+  tool_resources = {
+    file_search = {
       vector_store_ids = [openai_vector_store.analysis_store.id]
     }
-    code_interpreter {
+    code_interpreter = {
       file_ids = toset([openai_file.code_file.id])
     }
   }
@@ -123,10 +119,9 @@ resource "openai_thread" "analysis_session_file_search" {
     session_type = "data_analysis"
     project      = "example"
   }
-
-  # Configure the thread to use the vector store for semantic search
-  tool_resources {
-    file_search {
+  
+  tool_resources = {
+    file_search = {
       vector_store_ids = [openai_vector_store.analysis_store.id]
     }
   }
@@ -137,10 +132,9 @@ resource "openai_thread" "analysis_session_code_interpreter" {
     session_type = "data_analysis"
     project      = "example"
   }
-
-  # Configure the thread to use the vector store for semantic search
-  tool_resources {
-    code_interpreter {
+  
+  tool_resources = {
+    code_interpreter = {
       file_ids = toset([openai_file.code_file.id])
     }
   }
